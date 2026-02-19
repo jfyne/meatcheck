@@ -1,5 +1,7 @@
 # Meatcheck
 
+![Meatcheck logo](internal/ui/logo.png)
+
 A local PR‑style review UI for LLM workflows. Run the `meatcheck` CLI with a set of files, review them in a browser, leave inline comments, and get structured feedback on stdout when you finish.
 
 ## Features
@@ -57,3 +59,4 @@ comments:
 ```bash
 go test ./...
 ```
+
