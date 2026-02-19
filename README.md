@@ -16,9 +16,7 @@ A local PR‑style review UI for LLM workflows. Run the `meatcheck` CLI with a s
 ## Install / Build
 
 ```bash
-# from repo root
- go mod tidy
- go build ./cmd/meatcheck
+go install github.com/jfyne/meatcheck@latest
 ```
 
 ## Usage
@@ -32,6 +30,13 @@ go run ./cmd/meatcheck -- path/to/file1.go path/to/file2.css
 
 # include a review prompt/question
 ./meatcheck --prompt "Focus on security and error handling" path/to/file1.go
+
+# render a unified diff
+./meatcheck --diff changes.diff
+cat changes.diff | ./meatcheck
+
+# render only a section of a file
+./meatcheck --range "path/to/file.go:10-40" path/to/file.go
 ```
 
 ## Keyboard Shortcuts

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -78,16 +79,52 @@ type ViewFile struct {
 	Lines []ViewLine
 }
 
+type ViewMode string
+
+const (
+	ModeFile ViewMode = "file"
+	ModeDiff ViewMode = "diff"
+)
+
+type ViewDiffLine struct {
+	Kind      DiffLineKind
+	OldLine   int
+	NewLine   int
+	Text      string
+	HTML      template.HTML
+	Selected  bool
+	Commented bool
+	Comments  []ViewComment
+}
+
+type ViewDiffHunk struct {
+	Header string
+	Lines  []ViewDiffLine
+}
+
+type ViewDiffFile struct {
+	Path  string
+	Hunks []ViewDiffHunk
+}
+
 type ViewComment struct {
 	Comment
 	Rendered template.HTML
 }
 
+type LineRange struct {
+	Start int
+	End   int
+}
+
 type ReviewModel struct {
 	Files          []File
+	DiffFiles      []DiffFile
 	Tree           []TreeItem
 	SelectedPath   string
+	SelectedLabel  string
 	CodeViewKey    string
+	Mode           ViewMode
 	RenderFile     bool
 	RenderComments bool
 	Prompt         string
@@ -96,7 +133,9 @@ type ReviewModel struct {
 	SelectionEnd   int
 	CommentDraft   string
 	Comments       []Comment
+	Ranges         map[string][]LineRange
 	ViewFile       ViewFile
+	ViewDiff       ViewDiffFile
 	Error          string
 }
 
@@ -107,10 +146,13 @@ type ReviewServer struct {
 }
 
 type Config struct {
-	Host   string
-	Port   int
-	Paths  []string
-	Prompt string
+	Host    string
+	Port    int
+	Paths   []string
+	Prompt  string
+	Diff    string
+	Ranges  map[string][]LineRange
+	StdDiff string
 }
 
 func PrintHelp(w io.Writer) {
@@ -118,11 +160,15 @@ func PrintHelp(w io.Writer) {
 
 Usage:
   meatcheck [--host 127.0.0.1] [--port 0] <file1> <file2> ...
+  meatcheck --diff <diff-file>
+  meatcheck --diff <diff-file> --prompt "Review the changes"
 
 Flags:
   --host   host to bind (default 127.0.0.1)
   --port   port to bind, 0 = random free port (default 0)
   --prompt review prompt/question to display at top
+  --diff   path to unified diff file (or pipe via stdin)
+  --range  file section to render (path:start-end), repeatable
   --help   show this help and exit
   --skill  print agent skill markdown and exit
 `)
@@ -131,7 +177,7 @@ Flags:
 func PrintSkill(w io.Writer) {
 	fmt.Fprint(w, "---\n"+
 		"name: meatcheck\n"+
-		"description: Launch the meatcheck local, PR-style review UI for a set of files and collect inline feedback with file/line anchors.\n"+
+		"description: Request a PR-style review UI for a set of files or a diff and collect inline feedback with file/line anchors from the user.\n"+
 		"---\n"+
 		"\n"+
 		"# Meatcheck\n"+
@@ -143,9 +189,17 @@ func PrintSkill(w io.Writer) {
 		"```bash\n"+
 		"meatcheck <file1> <file2> ...\n"+
 		"meatcheck --prompt \"Focus on security and error handling\" <file1>\n"+
+		"meatcheck --diff changes.diff\n"+
+		"cat changes.diff | meatcheck\n"+
+		"meatcheck --range \"path/to/file.go:10-40\" <file1>\n"+
 		"```\n"+
 		"\n"+
 		"The CLI opens a browser UI with a GitHub-like review layout. The reviewer can select lines/ranges, add inline comments, and click **Finish**.\n"+
+		"\n"+
+		"## Important\n"+
+		"\n"+
+		"- Run the `meatcheck` command and wait for the process to finish.\n"+
+		"- Do not stop or terminate the process manually; keep it running until it exits on its own.\n"+
 		"\n"+
 		"## Output\n"+
 		"\n"+
@@ -160,31 +214,67 @@ func PrintSkill(w io.Writer) {
 		"## Notes\n"+
 		"\n"+
 		"- Use `--host` / `--port` to control binding.\n"+
+		"- Use `--diff` or pipe a unified diff to render changes.\n"+
+		"- Use `--range` to render only specific sections of a file.\n"+
 		"- Use `--skill` to print this SKILL.md content.\n")
 }
 
 func Run(ctx context.Context, cfg Config) error {
-	if len(cfg.Paths) == 0 {
-		return errors.New("no files provided")
+	diffInput := strings.TrimSpace(cfg.StdDiff)
+	if cfg.Diff != "" {
+		data, err := os.ReadFile(cfg.Diff)
+		if err != nil {
+			return fmt.Errorf("read diff: %w", err)
+		}
+		diffInput = string(data)
 	}
 
-	files, err := loadFiles(cfg.Paths)
-	if err != nil {
-		return err
+	var files []File
+	var diffFiles []DiffFile
+	mode := ModeFile
+	if diffInput != "" {
+		parsed, err := parseUnifiedDiff(diffInput)
+		if err != nil {
+			return err
+		}
+		if len(parsed) == 0 {
+			return errors.New("no files in diff")
+		}
+		diffFiles = parsed
+		mode = ModeDiff
+	} else {
+		if len(cfg.Paths) == 0 {
+			return errors.New("no files provided")
+		}
+		loaded, err := loadFiles(cfg.Paths)
+		if err != nil {
+			return err
+		}
+		files = loaded
 	}
 
 	model := &ReviewModel{
 		Files:          files,
-		SelectedPath:   files[0].Path,
+		DiffFiles:      diffFiles,
+		SelectedPath:   "",
+		SelectedLabel:  "",
+		Mode:           mode,
 		RenderFile:     true,
 		RenderComments: true,
 		Prompt:         cfg.Prompt,
+		Ranges:         cfg.Ranges,
 	}
 	if strings.TrimSpace(cfg.Prompt) != "" {
 		model.PromptHTML = renderMarkdown(cfg.Prompt)
 	}
 	model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
-	model.Tree = buildTree(files, model.SelectedPath)
+	if mode == ModeDiff {
+		model.SelectedPath = diffFiles[0].Path
+		model.Tree = buildTree(diffFilesAsFiles(diffFiles), model.SelectedPath)
+	} else {
+		model.SelectedPath = files[0].Path
+		model.Tree = buildTree(files, model.SelectedPath)
+	}
 	updateView(model)
 
 	meatcheckServer := &ReviewServer{
@@ -260,6 +350,62 @@ func loadFiles(paths []string) ([]File, error) {
 	return files, nil
 }
 
+func ReadStdDiff() (string, error) {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return "", err
+	}
+	if (stat.Mode() & os.ModeCharDevice) != 0 {
+		return "", nil
+	}
+	reader := bufio.NewReader(os.Stdin)
+	var b strings.Builder
+	for {
+		chunk, err := reader.ReadString('\n')
+		b.WriteString(chunk)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return "", err
+		}
+	}
+	return b.String(), nil
+}
+
+func ParseRangeFlag(values []string) (map[string][]LineRange, error) {
+	if len(values) == 0 {
+		return nil, nil
+	}
+	ranges := make(map[string][]LineRange)
+	for _, val := range values {
+		val = strings.TrimSpace(val)
+		if val == "" {
+			continue
+		}
+		parts := strings.SplitN(val, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid range: %s", val)
+		}
+		path := parts[0]
+		r := parts[1]
+		seg := strings.SplitN(r, "-", 2)
+		if len(seg) != 2 {
+			return nil, fmt.Errorf("invalid range: %s", val)
+		}
+		start := mustAtoi(seg[0])
+		end := mustAtoi(seg[1])
+		if start == 0 || end == 0 {
+			return nil, fmt.Errorf("invalid range: %s", val)
+		}
+		if end < start {
+			start, end = end, start
+		}
+		ranges[path] = append(ranges[path], LineRange{Start: start, End: end})
+	}
+	return ranges, nil
+}
+
 func buildLiveHandler(rs *ReviewServer) *live.Handler {
 	tmpl := template.Must(template.New("meatcheck").Funcs(template.FuncMap{
 		"mul": func(a, b int) int {
@@ -311,14 +457,27 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		if path == "" {
 			return model, nil
 		}
-		if hasFile(model.Files, path) {
-			model.SelectedPath = path
-			model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
-			model.SelectionStart = 0
-			model.SelectionEnd = 0
-			model.Error = ""
-			model.Tree = buildTree(model.Files, model.SelectedPath)
-			updateView(model)
+		switch model.Mode {
+		case ModeDiff:
+			if hasDiffFile(model.DiffFiles, path) {
+				model.SelectedPath = path
+				model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
+				model.SelectionStart = 0
+				model.SelectionEnd = 0
+				model.Error = ""
+				model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath)
+				updateView(model)
+			}
+		default:
+			if hasFile(model.Files, path) {
+				model.SelectedPath = path
+				model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
+				model.SelectionStart = 0
+				model.SelectionEnd = 0
+				model.Error = ""
+				model.Tree = buildTree(model.Files, model.SelectedPath)
+				updateView(model)
+			}
 		}
 		return model, nil
 	})
@@ -343,6 +502,11 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		shift := p.String("shift") == "1"
 		if line <= 0 {
 			return model, nil
+		}
+		if model.Mode == ModeDiff {
+			if !diffLineExists(model.DiffFiles, model.SelectedPath, line) {
+				return model, nil
+			}
 		}
 		if shift && model.SelectionStart > 0 {
 			start := model.SelectionStart
@@ -427,6 +591,15 @@ func getModel(s *live.Socket, fallback *ReviewModel) *ReviewModel {
 }
 
 func updateView(model *ReviewModel) {
+	switch model.Mode {
+	case ModeDiff:
+		updateDiffView(model)
+	default:
+		updateFileView(model)
+	}
+}
+
+func updateFileView(model *ReviewModel) {
 	selectedFile := findFile(model.Files, model.SelectedPath)
 	viewFile := ViewFile{Path: model.SelectedPath}
 	if selectedFile != nil {
@@ -434,46 +607,219 @@ func updateView(model *ReviewModel) {
 		if model.RenderFile {
 			rendered = codeRenderer.RenderLines(selectedFile.Path, selectedFile.Lines)
 		}
-		viewFile.Lines = buildViewLines(selectedFile, model.Comments, model.SelectionStart, model.SelectionEnd, rendered)
+		viewFile.Lines = buildViewLinesWithRanges(selectedFile, model.Comments, model.SelectionStart, model.SelectionEnd, rendered, model.Ranges[selectedFile.Path])
 	}
 	model.ViewFile = viewFile
+	model.SelectedLabel = formatSelectedLabel(model.SelectedPath, model.Ranges[model.SelectedPath])
+}
+
+func updateDiffView(model *ReviewModel) {
+	diffFile := findDiffFile(model.DiffFiles, model.SelectedPath)
+	viewDiff := ViewDiffFile{Path: model.SelectedPath}
+	if diffFile != nil {
+		viewDiff = buildViewDiff(diffFile, model.Comments, model.SelectionStart, model.SelectionEnd, model.RenderFile)
+	}
+	model.ViewDiff = viewDiff
+	model.SelectedLabel = model.SelectedPath
+}
+
+func buildViewLinesWithRanges(file *File, comments []Comment, start, end int, rendered []template.HTML, ranges []LineRange) []ViewLine {
+	if len(ranges) == 0 {
+		return buildViewLines(file, comments, start, end, rendered)
+	}
+	norm := normalizeRanges(ranges)
+	lines := make([]ViewLine, 0, len(file.Lines))
+	for _, r := range norm {
+		if r.Start < 1 {
+			r.Start = 1
+		}
+		if r.End > len(file.Lines) {
+			r.End = len(file.Lines)
+		}
+		for i := r.Start - 1; i < r.End; i++ {
+			lines = append(lines, buildSingleViewLine(file, comments, start, end, rendered, i))
+		}
+	}
+	return lines
+}
+
+func buildSingleViewLine(file *File, comments []Comment, start, end int, rendered []template.HTML, idx int) ViewLine {
+	lineNum := idx + 1
+	raw := file.Lines[idx]
+	selected := start > 0 && end > 0 && lineNum >= start && lineNum <= end
+	commented := false
+	var lineComments []ViewComment
+	for _, c := range comments {
+		if c.Path != file.Path {
+			continue
+		}
+		if lineNum >= c.StartLine && lineNum <= c.EndLine {
+			commented = true
+		}
+		if lineNum == c.StartLine {
+			lineComments = append(lineComments, ViewComment{
+				Comment:  c,
+				Rendered: renderMarkdown(c.Text),
+			})
+		}
+	}
+	lineHTML := template.HTML("")
+	if len(rendered) > idx {
+		lineHTML = rendered[idx]
+	}
+	return ViewLine{
+		Number:    lineNum,
+		Text:      raw,
+		HTML:      lineHTML,
+		Selected:  selected,
+		Commented: commented,
+		Comments:  lineComments,
+	}
 }
 
 func buildViewLines(file *File, comments []Comment, start, end int, rendered []template.HTML) []ViewLine {
 	lines := make([]ViewLine, 0, len(file.Lines))
-	for i, raw := range file.Lines {
-		lineNum := i + 1
-		selected := start > 0 && end > 0 && lineNum >= start && lineNum <= end
-		commented := false
-		var lineComments []ViewComment
-		for _, c := range comments {
-			if c.Path != file.Path {
-				continue
-			}
-			if lineNum >= c.StartLine && lineNum <= c.EndLine {
-				commented = true
-			}
-			if lineNum == c.StartLine {
-				lineComments = append(lineComments, ViewComment{
-					Comment:  c,
-					Rendered: renderMarkdown(c.Text),
-				})
-			}
-		}
-		lineHTML := template.HTML("")
-		if len(rendered) > i {
-			lineHTML = rendered[i]
-		}
-		lines = append(lines, ViewLine{
-			Number:    lineNum,
-			Text:      raw,
-			HTML:      lineHTML,
-			Selected:  selected,
-			Commented: commented,
-			Comments:  lineComments,
-		})
+	for i := range file.Lines {
+		lines = append(lines, buildSingleViewLine(file, comments, start, end, rendered, i))
 	}
 	return lines
+}
+
+func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bool) ViewDiffFile {
+	view := ViewDiffFile{Path: file.Path}
+	for _, h := range file.Hunks {
+		hdr := fmt.Sprintf("@@ -%d,%d +%d,%d @@", h.OldStart, h.OldCount, h.NewStart, h.NewCount)
+		vh := ViewDiffHunk{Header: hdr}
+		var rendered []template.HTML
+		if render {
+			lines := make([]string, 0, len(h.Lines))
+			for _, dl := range h.Lines {
+				lines = append(lines, dl.Text)
+			}
+			rendered = codeRenderer.RenderLines(file.Path, lines)
+		}
+		for i, dl := range h.Lines {
+			line := ViewDiffLine{
+				Kind:    dl.Kind,
+				OldLine: dl.OldLine,
+				NewLine: dl.NewLine,
+				Text:    dl.Text,
+			}
+			if len(rendered) > i {
+				line.HTML = rendered[i]
+			}
+			selectable := dl.NewLine > 0 && dl.Kind != DiffDel
+			if selectable && start > 0 && end > 0 && dl.NewLine >= start && dl.NewLine <= end {
+				line.Selected = true
+			}
+			var lineComments []ViewComment
+			for _, c := range comments {
+				if c.Path != file.Path {
+					continue
+				}
+				if dl.NewLine > 0 && dl.NewLine >= c.StartLine && dl.NewLine <= c.EndLine {
+					line.Commented = true
+				}
+				if dl.NewLine > 0 && dl.NewLine == c.StartLine {
+					lineComments = append(lineComments, ViewComment{
+						Comment:  c,
+						Rendered: renderMarkdown(c.Text),
+					})
+				}
+			}
+			line.Comments = lineComments
+			if !selectable {
+				line.Selected = false
+			}
+			vh.Lines = append(vh.Lines, line)
+		}
+		view.Hunks = append(view.Hunks, vh)
+	}
+	return view
+}
+
+func diffFilesAsFiles(diffFiles []DiffFile) []File {
+	files := make([]File, 0, len(diffFiles))
+	for _, df := range diffFiles {
+		files = append(files, File{Path: df.Path, PathSlash: filepath.ToSlash(df.Path)})
+	}
+	return files
+}
+
+func findDiffFile(files []DiffFile, path string) *DiffFile {
+	for i := range files {
+		if files[i].Path == path {
+			return &files[i]
+		}
+	}
+	return nil
+}
+
+func hasDiffFile(files []DiffFile, path string) bool {
+	return findDiffFile(files, path) != nil
+}
+func diffLineExists(files []DiffFile, path string, line int) bool {
+	file := findDiffFile(files, path)
+	if file == nil {
+		return false
+	}
+	for _, h := range file.Hunks {
+		for _, dl := range h.Lines {
+			if dl.NewLine == line && dl.Kind != DiffDel {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func normalizeRanges(ranges []LineRange) []LineRange {
+	if len(ranges) == 0 {
+		return nil
+	}
+	var cleaned []LineRange
+	for _, r := range ranges {
+		if r.Start <= 0 || r.End <= 0 {
+			continue
+		}
+		if r.End < r.Start {
+			r.Start, r.End = r.End, r.Start
+		}
+		cleaned = append(cleaned, r)
+	}
+	if len(cleaned) == 0 {
+		return nil
+	}
+	sort.Slice(cleaned, func(i, j int) bool {
+		if cleaned[i].Start == cleaned[j].Start {
+			return cleaned[i].End < cleaned[j].End
+		}
+		return cleaned[i].Start < cleaned[j].Start
+	})
+	merged := []LineRange{cleaned[0]}
+	for _, r := range cleaned[1:] {
+		last := &merged[len(merged)-1]
+		if r.Start <= last.End+1 {
+			if r.End > last.End {
+				last.End = r.End
+			}
+			continue
+		}
+		merged = append(merged, r)
+	}
+	return merged
+}
+
+func formatSelectedLabel(path string, ranges []LineRange) string {
+	if len(ranges) == 0 {
+		return path
+	}
+	norm := normalizeRanges(ranges)
+	parts := make([]string, 0, len(norm))
+	for _, r := range norm {
+		parts = append(parts, fmt.Sprintf("%d-%d", r.Start, r.End))
+	}
+	return fmt.Sprintf("%s (lines %s)", path, strings.Join(parts, ", "))
 }
 
 func buildTree(files []File, selectedPath string) []TreeItem {

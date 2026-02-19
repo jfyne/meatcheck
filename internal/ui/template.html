@@ -63,47 +63,92 @@
 
       <section class="main">
         <div class="column-header">
-          <div class="path">{{.SelectedPath}}</div>
+          <div class="path">{{.SelectedLabel}}</div>
         </div>
         <main class="content">
-          <div class="code {{if $root.RenderFile}}chroma{{end}}" id="code-view-{{.CodeViewKey}}">
-            {{range .ViewFile.Lines}}
-              <div class="line-block" id="line-{{id $root.SelectedPath}}-{{.Number}}">
-                <div class="line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}">
-                  <span class="ln" data-line="{{.Number}}">{{.Number}}</span>
-                  <div class="code-text">{{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}</div>
-                </div>
-                {{if .Comments}}
-                  <div class="line-comment-thread">
-                    {{range .Comments}}
-                      <div class="line-comment">
-                        <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
-                        {{if $root.RenderComments}}
-                          <div class="line-comment-body markdown">{{.Rendered}}</div>
-                        {{else}}
-                          <div class="line-comment-body">{{.Text}}</div>
-                        {{end}}
-                      </div>
-                    {{end}}
-                  </div>
-                {{end}}
-                {{if and (gt $root.SelectionEnd 0) (eq .Number $root.SelectionEnd)}}
-                  <div class="inline-comment">
-                    <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
-                      <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
-                      <textarea name="comment" placeholder="Leave a comment..."></textarea>
-                      {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
-                      <div class="comment-actions">
-                        <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
-                        <button class="btn" type="submit">Add Comment</button>
-                      </div>
-                    </form>
-                  </div>
+          {{if eq $root.Mode "diff"}}
+  <div class="diff" id="code-view-{{.CodeViewKey}}">
+    {{range .ViewDiff.Hunks}}
+      <div class="hunk-header">{{.Header}}</div>
+      {{range .Lines}}
+        <div class="diff-line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}" data-new-line="{{.NewLine}}" data-kind="{{.Kind}}">
+          <span class="ln old">{{if gt .OldLine 0}}{{.OldLine}}{{end}}</span>
+          <span class="ln new" data-line="{{.NewLine}}">{{if gt .NewLine 0}}{{.NewLine}}{{end}}</span>
+          <span class="diff-sign {{.Kind}}">{{if eq .Kind "add"}}+{{else if eq .Kind "del"}}-{{else}} {{end}}</span>
+          <div class="code-text {{if $root.RenderFile}}chroma{{end}}">
+            {{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}
+          </div>
+        </div>
+        {{if .Comments}}
+          <div class="line-comment-thread">
+            {{range .Comments}}
+              <div class="line-comment">
+                <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
+                {{if $root.RenderComments}}
+                  <div class="line-comment-body markdown">{{.Rendered}}</div>
+                {{else}}
+                  <div class="line-comment-body">{{.Text}}</div>
                 {{end}}
               </div>
             {{end}}
           </div>
-        </main>
+        {{end}}
+        {{if and (gt $root.SelectionEnd 0) (eq .NewLine $root.SelectionEnd) (ne .Kind "del")}}
+          <div class="inline-comment">
+            <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
+              <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
+              <textarea name="comment" placeholder="Leave a comment..."></textarea>
+              {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
+              <div class="comment-actions">
+                <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
+                <button class="btn" type="submit">Add Comment</button>
+              </div>
+            </form>
+          </div>
+        {{end}}
+      {{end}}
+    {{end}}
+  </div>
+{{else}}
+  <div class="code {{if $root.RenderFile}}chroma{{end}}" id="code-view-{{.CodeViewKey}}">
+    {{range .ViewFile.Lines}}
+      <div class="line-block" id="line-{{id $root.SelectedPath}}-{{.Number}}">
+        <div class="line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}">
+          <span class="ln" data-line="{{.Number}}">{{.Number}}</span>
+          <div class="code-text">{{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}</div>
+        </div>
+        {{if .Comments}}
+          <div class="line-comment-thread">
+            {{range .Comments}}
+              <div class="line-comment">
+                <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
+                {{if $root.RenderComments}}
+                  <div class="line-comment-body markdown">{{.Rendered}}</div>
+                {{else}}
+                  <div class="line-comment-body">{{.Text}}</div>
+                {{end}}
+              </div>
+            {{end}}
+          </div>
+        {{end}}
+        {{if and (gt $root.SelectionEnd 0) (eq .Number $root.SelectionEnd)}}
+          <div class="inline-comment">
+            <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
+              <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
+              <textarea name="comment" placeholder="Leave a comment..."></textarea>
+              {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
+              <div class="comment-actions">
+                <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
+                <button class="btn" type="submit">Add Comment</button>
+              </div>
+            </form>
+          </div>
+        {{end}}
+      </div>
+    {{end}}
+  </div>
+{{end}}
+</main>
       </section>
     </div>
     {{end}}
