@@ -1,0 +1,59 @@
+# Meatcheck
+
+A local PR‑style review UI for LLM workflows. Run the `meatcheck` CLI with a set of files, review them in a browser, leave inline comments, and get structured feedback on stdout when you finish.
+
+## Features
+
+- File tree + code view UI similar to GitHub PR reviews
+- Click to select a line, shift‑click for a range
+- Inline comment threads under the referenced line
+- Markdown rendering for comments (toggle raw/rendered)
+- Syntax highlighting for code (toggle raw/rendered)
+- Outputs TOON format to stdout on Finish
+
+## Install / Build
+
+```bash
+# from repo root
+ go mod tidy
+ go build ./cmd/meatcheck
+```
+
+## Usage
+
+```bash
+# open the meatcheck UI for specific files
+./meatcheck path/to/file1.go path/to/file2.css
+
+# or via go run during development
+go run ./cmd/meatcheck -- path/to/file1.go path/to/file2.css
+```
+
+## Keyboard Shortcuts
+
+- `Ctrl+Enter` / `Cmd+Enter`: submit the inline comment
+
+## Output
+
+On “Finish Review”, the app prints TOON to stdout and exits.
+
+Example (shape only):
+
+```
+comments:
+  - path: cmd/meatcheck/main.go
+    start_line: 42
+    end_line: 45
+    text: "Consider splitting this helper into its own package."
+```
+
+## Notes
+
+- Tabs/spaces are preserved in rendered mode via whitespace normalization to keep diffs accurate.
+- Browser close behavior depends on browser security policies. If the tab can’t be closed programmatically, it will navigate to `about:blank` instead.
+
+## Development
+
+```bash
+go test ./...
+```

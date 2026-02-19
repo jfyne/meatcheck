@@ -34,9 +34,13 @@
 
 body {
   margin: 0;
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, Adwaita Sans, Cantarell, Ubuntu, roboto, noto, helvetica, arial, sans-serif;
   color: var(--ink);
   background: radial-gradient(circle at top, #fff7e8 0%, var(--bg) 55%);
+}
+
+.serif {
+  font-family: Iowan Old Style, Apple Garamond, Baskerville, Times New Roman, Droid Serif, Times, Source Serif Pro, serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -112,6 +116,51 @@ body {
   font-size: 16px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #f4f4f4;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-btn:hover {
+  background: var(--line-hover);
+}
+
+.icon-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent-soft);
+}
+
+@media (prefers-color-scheme: dark) {
+  .icon-btn {
+    background: #1c222c;
+  }
+
+  .icon-btn:hover {
+    background: #232a36;
+  }
+}
+
 .btn {
   background: var(--accent);
   color: #fff;
@@ -146,10 +195,12 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px 0;
-  font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, monospace;
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
   font-size: 13px;
   line-height: 1.6;
   overflow: auto;
+  tab-size: 4;
+  -moz-tab-size: 4;
 }
 
 .line {
@@ -186,6 +237,22 @@ body {
 
 .code-text {
   white-space: pre;
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  letter-spacing: 0;
+  word-spacing: 0;
+  font-variant-ligatures: none;
+  tab-size: 4;
+  -moz-tab-size: 4;
+}
+
+.code-text * {
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  white-space: pre;
+  letter-spacing: 0;
+  word-spacing: 0;
+  font-variant-ligatures: none;
+  tab-size: 4;
+  -moz-tab-size: 4;
 }
 
 .footer {
@@ -238,6 +305,64 @@ textarea {
   font-size: 11px;
   color: var(--muted);
   margin-bottom: 4px;
+}
+
+.markdown {
+  line-height: 1.5;
+}
+
+.markdown p {
+  margin: 0 0 8px 0;
+}
+
+.markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown code {
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  background: rgba(45, 108, 223, 0.12);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.markdown pre {
+  background: #f2efe9;
+  padding: 10px 12px;
+  border-radius: 8px;
+  overflow: auto;
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  letter-spacing: 0;
+  word-spacing: 0;
+  font-variant-ligatures: none;
+}
+
+.chroma {
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  letter-spacing: 0;
+  word-spacing: 0;
+  font-variant-ligatures: none;
+  tab-size: 4;
+  -moz-tab-size: 4;
+}
+
+.chroma * {
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  letter-spacing: 0;
+  word-spacing: 0;
+  font-variant-ligatures: none;
+  tab-size: 4;
+  -moz-tab-size: 4;
+}
+
+.markdown a {
+  color: var(--accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown pre {
+    background: #0f131a;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

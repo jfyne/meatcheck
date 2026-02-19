@@ -6,6 +6,7 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"html"
 	"html/template"
 	"io"
 	"net"
@@ -20,7 +21,10 @@ import (
 
 	"github.com/alpkeskin/gotoon"
 	"github.com/jfyne/live"
+	"github.com/jfyne/meatcheck/internal/highlight"
 	"github.com/pkg/browser"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 )
 
 //go:embed template.html styles.css
@@ -29,6 +33,14 @@ var embeddedFiles embed.FS
 var (
 	templateHTML = mustReadEmbedded("template.html")
 	stylesCSS    = mustReadEmbedded("styles.css")
+)
+
+var (
+	markdownRenderer = goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithRendererOptions(),
+	)
+	codeRenderer = highlight.NewRenderer("github", "dracula", 4)
 )
 
 func mustReadEmbedded(path string) string {
@@ -63,9 +75,10 @@ type TreeItem struct {
 type ViewLine struct {
 	Number    int
 	Text      string
+	HTML      template.HTML
 	Selected  bool
 	Commented bool
-	Comments  []Comment
+	Comments  []ViewComment
 }
 
 type ViewFile struct {
@@ -73,11 +86,18 @@ type ViewFile struct {
 	Lines []ViewLine
 }
 
+type ViewComment struct {
+	Comment
+	Rendered template.HTML
+}
+
 type ReviewModel struct {
 	Files          []File
 	Tree           []TreeItem
 	SelectedPath   string
 	CodeViewKey    string
+	RenderFile     bool
+	RenderComments bool
 	SelectionStart int
 	SelectionEnd   int
 	CommentDraft   string
@@ -94,13 +114,25 @@ type ReviewServer struct {
 
 func main() {
 	var (
-		host = flag.String("host", "127.0.0.1", "host to bind")
-		port = flag.Int("port", 0, "port to bind (0 = random)")
+		host      = flag.String("host", "127.0.0.1", "host to bind")
+		port      = flag.Int("port", 0, "port to bind (0 = random)")
+		showHelp  = flag.Bool("help", false, "show help")
+		showSkill = flag.Bool("skill", false, "print agent skill markdown")
 	)
 	flag.Parse()
 
+	if *showHelp {
+		printHelp()
+		return
+	}
+	if *showSkill {
+		printSkill()
+		return
+	}
+
 	if flag.NArg() == 0 {
-		fmt.Fprintln(os.Stderr, "usage: review <file1> <file2> ...")
+		fmt.Fprintln(os.Stderr, "usage: meatcheck <file1> <file2> ...")
+		fmt.Fprintln(os.Stderr, "run with --help for more information")
 		os.Exit(2)
 	}
 
@@ -111,19 +143,21 @@ func main() {
 	}
 
 	model := &ReviewModel{
-		Files:        files,
-		SelectedPath: files[0].Path,
+		Files:          files,
+		SelectedPath:   files[0].Path,
+		RenderFile:     true,
+		RenderComments: true,
 	}
 	model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
 	model.Tree = buildTree(files, model.SelectedPath)
 	updateView(model)
 
-	reviewServer := &ReviewServer{
+	meatcheckServer := &ReviewServer{
 		Model:  model,
 		DoneCh: make(chan struct{}),
 	}
 
-	h := buildLiveHandler(reviewServer)
+	h := buildLiveHandler(meatcheckServer)
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", *host, *port))
 	if err != nil {
@@ -147,13 +181,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "open this URL in your browser: %s\n", url)
 	}
 
-	<-reviewServer.DoneCh
+	<-meatcheckServer.DoneCh
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	_ = srv.Shutdown(ctx)
 	cancel()
 
-	if err := emitToon(os.Stdout, reviewServer.Model.Comments); err != nil {
+	if err := emitToon(os.Stdout, meatcheckServer.Model.Comments); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
@@ -177,7 +211,7 @@ func loadFiles(paths []string) ([]File, error) {
 }
 
 func buildLiveHandler(rs *ReviewServer) *live.Handler {
-	tmpl := template.Must(template.New("review").Funcs(template.FuncMap{
+	tmpl := template.Must(template.New("meatcheck").Funcs(template.FuncMap{
 		"mul": func(a, b int) int {
 			return a * b
 		},
@@ -196,11 +230,12 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 
 	h := live.NewHandler()
 	h.RenderHandler = func(ctx context.Context, rc *live.RenderContext) (io.Reader, error) {
+		css := buildCSS()
 		data := struct {
 			CSS template.CSS
 			*live.RenderContext
 		}{
-			CSS:           template.CSS(stylesCSS),
+			CSS:           template.CSS(css),
 			RenderContext: rc,
 		}
 		var buf bytes.Buffer
@@ -228,6 +263,20 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 			model.Tree = buildTree(model.Files, model.SelectedPath)
 			updateView(model)
 		}
+		return model, nil
+	})
+
+	h.HandleEvent("toggle-file-render", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		model.RenderFile = !model.RenderFile
+		updateView(model)
+		return model, nil
+	})
+
+	h.HandleEvent("toggle-comment-render", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		model.RenderComments = !model.RenderComments
+		updateView(model)
 		return model, nil
 	})
 
@@ -314,18 +363,22 @@ func updateView(model *ReviewModel) {
 	selectedFile := findFile(model.Files, model.SelectedPath)
 	viewFile := ViewFile{Path: model.SelectedPath}
 	if selectedFile != nil {
-		viewFile.Lines = buildViewLines(selectedFile, model.Comments, model.SelectionStart, model.SelectionEnd)
+		var rendered []template.HTML
+		if model.RenderFile {
+			rendered = codeRenderer.RenderLines(selectedFile.Path, selectedFile.Lines)
+		}
+		viewFile.Lines = buildViewLines(selectedFile, model.Comments, model.SelectionStart, model.SelectionEnd, rendered)
 	}
 	model.ViewFile = viewFile
 }
 
-func buildViewLines(file *File, comments []Comment, start, end int) []ViewLine {
+func buildViewLines(file *File, comments []Comment, start, end int, rendered []template.HTML) []ViewLine {
 	lines := make([]ViewLine, 0, len(file.Lines))
 	for i, raw := range file.Lines {
 		lineNum := i + 1
 		selected := start > 0 && end > 0 && lineNum >= start && lineNum <= end
 		commented := false
-		var lineComments []Comment
+		var lineComments []ViewComment
 		for _, c := range comments {
 			if c.Path != file.Path {
 				continue
@@ -334,12 +387,20 @@ func buildViewLines(file *File, comments []Comment, start, end int) []ViewLine {
 				commented = true
 			}
 			if lineNum == c.StartLine {
-				lineComments = append(lineComments, c)
+				lineComments = append(lineComments, ViewComment{
+					Comment:  c,
+					Rendered: renderMarkdown(c.Text),
+				})
 			}
+		}
+		lineHTML := template.HTML("")
+		if len(rendered) > i {
+			lineHTML = rendered[i]
 		}
 		lines = append(lines, ViewLine{
 			Number:    lineNum,
 			Text:      raw,
+			HTML:      lineHTML,
 			Selected:  selected,
 			Commented: commented,
 			Comments:  lineComments,
@@ -448,4 +509,70 @@ func emitToon(w *os.File, comments []Comment) error {
 	}
 	_, err = fmt.Fprintln(w, encoded)
 	return err
+}
+
+func renderMarkdown(input string) template.HTML {
+	var buf bytes.Buffer
+	if err := markdownRenderer.Convert([]byte(input), &buf); err != nil {
+		return template.HTML(html.EscapeString(input))
+	}
+	return template.HTML(buf.String())
+}
+
+func buildCSS() string {
+	var buf bytes.Buffer
+	buf.WriteString(stylesCSS)
+	buf.WriteString("\n")
+	buf.WriteString(codeRenderer.BuildCSS())
+	return buf.String()
+}
+
+func printHelp() {
+	fmt.Print(`meatcheck - local PR-style review UI
+
+Usage:
+  meatcheck [--host 127.0.0.1] [--port 0] <file1> <file2> ...
+
+Flags:
+  --host   host to bind (default 127.0.0.1)
+  --port   port to bind, 0 = random free port (default 0)
+  --help   show this help and exit
+  --skill  print agent skill markdown and exit
+`)
+}
+
+func printSkill() {
+	fmt.Print("---\n" +
+		"name: meatcheck\n" +
+		"description: Launch the meatcheck local, PR-style review UI for a set of files and collect inline feedback with file/line anchors.\n" +
+		"---\n" +
+		"\n" +
+		"# Meatcheck\n" +
+		"\n" +
+		"Use this skill to request a human-style review of a set of files via meatcheck.\n" +
+		"\n" +
+		"## How to invoke\n" +
+		"\n" +
+		"```bash\n" +
+		"meatcheck <file1> <file2> ...\n" +
+		"```\n" +
+		"\n" +
+		"The CLI opens a browser UI with a GitHub-like review layout. The reviewer can select lines/ranges, add inline comments, and click **Finish**.\n" +
+		"\n" +
+		"## Output\n" +
+		"\n" +
+		"On finish, the CLI prints TOON to stdout with a list of comments:\n" +
+		"\n" +
+		"```\n" +
+		"comments:\n" +
+		"  - path: cmd/meatcheck/main.go\n" +
+		"    start_line: 10\n" +
+		"    end_line: 12\n" +
+		"    text: \"Consider extracting this helper.\"\n" +
+		"```\n" +
+		"\n" +
+		"## Notes\n" +
+		"\n" +
+		"- Use `--host` / `--port` to control binding.\n" +
+		"- Use `--skill` to print this SKILL.md content.\n")
 }

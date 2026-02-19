@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Review</title>
+  <title>Meatcheck</title>
   <style>
     {{.CSS}}
   </style>
 </head>
-<body>
+<body class="theme-light">
   <div class="app" live-hook="line-selector">
     {{with .Assigns}}
     {{$root := .}}
@@ -28,23 +28,42 @@
     <section class="main">
       <header class="header">
         <div class="path">{{.SelectedPath}}</div>
-        <button class="btn" live-click="finish">Finish Review</button>
+        <div class="header-actions">
+          <button class="icon-btn {{if .RenderFile}}active{{end}}" live-click="toggle-file-render" title="Toggle file rendering" aria-label="Toggle file rendering">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6 3h8l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M14 3v5h5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M8 13h2l1-2 2 4 1.2-2H16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="icon-btn {{if .RenderComments}}active{{end}}" live-click="toggle-comment-render" title="Toggle comment rendering" aria-label="Toggle comment rendering">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 4h14v10H8l-3 3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M8 8h8M8 11h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="btn" live-click="finish">Finish</button>
+        </div>
       </header>
 
       <main class="content">
-        <div class="code" id="code-view-{{.CodeViewKey}}">
+        <div class="code {{if $root.RenderFile}}chroma{{end}}" id="code-view-{{.CodeViewKey}}">
           {{range .ViewFile.Lines}}
             <div class="line-block" id="line-{{id $root.SelectedPath}}-{{.Number}}">
               <div class="line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}">
                 <span class="ln" data-line="{{.Number}}">{{.Number}}</span>
-                <span class="code-text">{{.Text}}</span>
+                <div class="code-text">{{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}</div>
               </div>
               {{if .Comments}}
                 <div class="line-comment-thread">
                   {{range .Comments}}
                     <div class="line-comment">
                       <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
-                      <div class="line-comment-body">{{.Text}}</div>
+                      {{if $root.RenderComments}}
+                        <div class="line-comment-body markdown">{{.Rendered}}</div>
+                      {{else}}
+                        <div class="line-comment-body">{{.Text}}</div>
+                      {{end}}
                     </div>
                   {{end}}
                 </div>
@@ -68,6 +87,20 @@
   </div>
 
   <script>
+    (function () {
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      const applyTheme = (dark) => {
+        document.body.classList.toggle("theme-dark", dark);
+        document.body.classList.toggle("theme-light", !dark);
+      };
+      applyTheme(media.matches);
+      if (typeof media.addEventListener === "function") {
+        media.addEventListener("change", (ev) => applyTheme(ev.matches));
+      } else if (typeof media.addListener === "function") {
+        media.addListener((ev) => applyTheme(ev.matches));
+      }
+    })();
+
     window.Hooks = window.Hooks || {};
     window.Hooks["line-selector"] = {
       mounted: function () {
