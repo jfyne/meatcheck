@@ -54,14 +54,3 @@ comments[2]{end_line,path,start_line,text}:
   29,README.md,29,This is a comment
   40,README.md,40,This is another Example comment
 ```
-
-## Notes
-
-- Tabs/spaces are preserved in rendered mode via whitespace normalization to keep diffs accurate.
-- Browser close behavior depends on browser security policies. If the tab can’t be closed programmatically, it will navigate to `about:blank` instead.
-
-## Development
-
-```bash
-go test ./...
-```

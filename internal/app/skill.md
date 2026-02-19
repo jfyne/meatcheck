@@ -20,6 +20,26 @@ meatcheck --range "path/to/file.go:10-40" <file1>
 
 The CLI opens a browser UI with a GitHub-like review layout. The reviewer can select lines/ranges, add inline comments, and click **Finish**.
 
+## Reviewing diffs
+
+Use diff mode when you want feedback scoped to changed lines instead of full files.
+
+```bash
+# review from a saved patch file
+meatcheck --diff changes.diff
+
+# review from git output directly
+git diff -- . ':!go.sum' | meatcheck
+
+# review staged changes
+git diff --cached | meatcheck --prompt "Focus on regressions and missing tests"
+```
+
+In diff mode:
+- Comments anchor to new-file line numbers for added/context lines.
+- Deleted lines are shown for context but are not comment targets.
+- File and hunk headers come from the unified diff, so prefer standard `git diff` output.
+
 ## Important
 
 - Run the `meatcheck` command and wait for the process to finish.
