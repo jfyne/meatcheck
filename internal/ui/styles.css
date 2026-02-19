@@ -197,10 +197,6 @@ body {
   height: 18px;
 }
 
-.icon-btn:hover {
-  background: var(--line-hover);
-}
-
 .icon-btn.active {
   background: var(--accent-soft);
   color: var(--accent);
