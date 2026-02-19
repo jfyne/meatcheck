@@ -75,8 +75,11 @@ type ViewLine struct {
 }
 
 type ViewFile struct {
-	Path  string
-	Lines []ViewLine
+	Path             string
+	Lines            []ViewLine
+	MarkdownFile     bool
+	MarkdownRendered bool
+	MarkdownHTML     template.HTML
 }
 
 type ViewMode string
@@ -439,7 +442,11 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 
 	h.HandleEvent("toggle-file-render", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
 		model := getModel(s, rs.Model)
-		model.RenderFile = !model.RenderFile
+		if model.Mode == ModeFile && isMarkdownPath(model.SelectedPath) {
+			model.ViewFile.MarkdownRendered = !model.ViewFile.MarkdownRendered
+		} else {
+			model.RenderFile = !model.RenderFile
+		}
 		updateView(model)
 		return model, nil
 	})
@@ -558,6 +565,20 @@ func updateFileView(model *ReviewModel) {
 	selectedFile := findFile(model.Files, model.SelectedPath)
 	viewFile := ViewFile{Path: model.SelectedPath}
 	if selectedFile != nil {
+		viewFile.MarkdownFile = isMarkdownPath(selectedFile.Path)
+		if viewFile.MarkdownFile {
+			if model.ViewFile.Path != selectedFile.Path {
+				viewFile.MarkdownRendered = true
+			} else {
+				viewFile.MarkdownRendered = model.ViewFile.MarkdownRendered
+			}
+		}
+		if viewFile.MarkdownFile && viewFile.MarkdownRendered {
+			viewFile.MarkdownHTML = renderMarkdown(strings.Join(selectedFile.Lines, "\n"))
+			model.ViewFile = viewFile
+			model.SelectedLabel = formatSelectedLabel(model.SelectedPath, model.Ranges[model.SelectedPath])
+			return
+		}
 		var rendered []template.HTML
 		if model.RenderFile {
 			rendered = codeRenderer.RenderLines(selectedFile.Path, selectedFile.Lines)
@@ -885,6 +906,11 @@ func renderMarkdown(input string) template.HTML {
 		return template.HTML(html.EscapeString(input))
 	}
 	return template.HTML(buf.String())
+}
+
+func isMarkdownPath(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".md" || ext == ".markdown"
 }
 
 func buildCSS() string {

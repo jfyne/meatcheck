@@ -26,7 +26,7 @@
             </div>
           {{end}}
           <div class="header-actions">
-          <button class="icon-btn {{if .RenderFile}}active{{end}}" live-click="toggle-file-render" title="Toggle file rendering" aria-label="Toggle file rendering">
+          <button class="icon-btn {{if and (eq .Mode "file") .ViewFile.MarkdownFile}}{{if .ViewFile.MarkdownRendered}}active{{end}}{{else}}{{if .RenderFile}}active{{end}}{{end}}" live-click="toggle-file-render" title="{{if and (eq .Mode "file") .ViewFile.MarkdownFile}}Toggle markdown preview{{else}}Toggle file rendering{{end}}" aria-label="{{if and (eq .Mode "file") .ViewFile.MarkdownFile}}Toggle markdown preview{{else}}Toggle file rendering{{end}}">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M6 3h8l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.5"/>
               <path d="M14 3v5h5" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -113,6 +113,12 @@
     {{end}}
   </div>
 {{else}}
+  {{if and .ViewFile.MarkdownFile .ViewFile.MarkdownRendered}}
+  <div class="markdown-file-preview markdown" id="code-view-{{.CodeViewKey}}">
+    <div class="markdown-file-body">{{.ViewFile.MarkdownHTML}}</div>
+    <div class="markdown-file-hint">Switch to code view to add line comments.</div>
+  </div>
+  {{else}}
   <div class="code {{if $root.RenderFile}}chroma{{end}}" id="code-view-{{.CodeViewKey}}">
     {{range .ViewFile.Lines}}
       <div class="line-block" id="line-{{id $root.SelectedPath}}-{{.Number}}">
@@ -153,6 +159,7 @@
       </div>
     {{end}}
   </div>
+  {{end}}
 {{end}}
 </main>
       </section>
