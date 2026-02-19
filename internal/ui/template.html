@@ -15,9 +15,9 @@
     {{$root := .}}
     <header class="header">
         <div class="header-top">
+          <img src="{{$.Avatar}}" alt="AI avatar" class="header-avatar" />
           {{if .Prompt}}
             <div class="prompt-inline">
-              <img src="{{$.Avatar}}" alt="Prompt avatar" class="prompt-avatar" />
               {{if .PromptHTML}}
                 <div class="prompt-body markdown">{{.PromptHTML}}</div>
               {{else}}
@@ -71,7 +71,7 @@
     {{range .ViewDiff.Hunks}}
       <div class="hunk-header">{{.Header}}</div>
       {{range .Lines}}
-        <div class="diff-line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}" data-new-line="{{.NewLine}}" data-kind="{{.Kind}}">
+        <div class="diff-line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}" data-line="{{.NewLine}}" data-new-line="{{.NewLine}}" data-kind="{{.Kind}}">
           <span class="ln old">{{if gt .OldLine 0}}{{.OldLine}}{{end}}</span>
           <span class="ln new" data-line="{{.NewLine}}">{{if gt .NewLine 0}}{{.NewLine}}{{end}}</span>
           <span class="diff-sign {{.Kind}}">{{if eq .Kind "add"}}+{{else if eq .Kind "del"}}-{{else}} {{end}}</span>
@@ -83,12 +83,15 @@
           <div class="line-comment-thread">
             {{range .Comments}}
               <div class="line-comment">
-                <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
-                {{if $root.RenderComments}}
-                  <div class="line-comment-body markdown">{{.Rendered}}</div>
-                {{else}}
-                  <div class="line-comment-body">{{.Text}}</div>
-                {{end}}
+                <img src="{{$.Logo}}" alt="Meatcheck logo" class="line-comment-avatar" />
+                <div class="line-comment-content">
+                  <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
+                  {{if $root.RenderComments}}
+                    <div class="line-comment-body markdown">{{.Rendered}}</div>
+                  {{else}}
+                    <div class="line-comment-body">{{.Text}}</div>
+                  {{end}}
+                </div>
               </div>
             {{end}}
           </div>
@@ -113,7 +116,7 @@
   <div class="code {{if $root.RenderFile}}chroma{{end}}" id="code-view-{{.CodeViewKey}}">
     {{range .ViewFile.Lines}}
       <div class="line-block" id="line-{{id $root.SelectedPath}}-{{.Number}}">
-        <div class="line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}">
+        <div class="line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}" data-line="{{.Number}}">
           <span class="ln" data-line="{{.Number}}">{{.Number}}</span>
           <div class="code-text">{{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}</div>
         </div>
@@ -121,12 +124,15 @@
           <div class="line-comment-thread">
             {{range .Comments}}
               <div class="line-comment">
-                <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
-                {{if $root.RenderComments}}
-                  <div class="line-comment-body markdown">{{.Rendered}}</div>
-                {{else}}
-                  <div class="line-comment-body">{{.Text}}</div>
-                {{end}}
+                <img src="{{$.Logo}}" alt="Meatcheck logo" class="line-comment-avatar" />
+                <div class="line-comment-content">
+                  <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
+                  {{if $root.RenderComments}}
+                    <div class="line-comment-body markdown">{{.Rendered}}</div>
+                  {{else}}
+                    <div class="line-comment-body">{{.Text}}</div>
+                  {{end}}
+                </div>
               </div>
             {{end}}
           </div>
@@ -184,8 +190,11 @@
         });
         root.addEventListener("click", (ev) => {
           const target = ev.target;
-          if (!target.classList.contains("ln")) return;
-          const line = Number(target.dataset.line || 0);
+          if (!target || !(target instanceof Element)) return;
+          if (target.closest(".inline-comment, .line-comment-thread, .comment-form")) return;
+          const clickable = target.closest("[data-line]");
+          if (!clickable) return;
+          const line = Number(clickable.dataset.line || 0);
           if (!line) return;
           const shift = ev.shiftKey ? "1" : "";
           if (window.Live && typeof window.Live.send === "function") {

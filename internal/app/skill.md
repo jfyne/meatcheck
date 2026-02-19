@@ -6,6 +6,7 @@ description: Request a PR-style review UI for a set of files or a diff and colle
 # Meatcheck
 
 Use this skill to request a human-style review of a set of files via meatcheck.
+When you want targeted feedback, provide `--prompt` with specific review goals (for example: security, correctness, performance, or API design) so the reviewer knows what to prioritize.
 
 ## How to invoke
 
@@ -37,6 +38,7 @@ comments[2]{end_line,path,start_line,text}:
 ## Notes
 
 - Use `--host` / `--port` to control binding.
+- Use `--prompt` to tell the reviewer what to focus on.
 - Use `--diff` or pipe a unified diff to render changes.
 - Use `--range` to render only specific sections of a file.
 - Use `--skill` to print this SKILL.md content.

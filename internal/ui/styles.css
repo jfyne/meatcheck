@@ -154,6 +154,14 @@ body {
   padding: 14px 24px;
 }
 
+.header-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
 .header .path {
   font-weight: 600;
   font-size: 16px;
@@ -165,14 +173,6 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.prompt-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 0;
-  object-fit: cover;
-  flex: 0 0 auto;
 }
 
 .prompt-inline .prompt-body {
@@ -287,6 +287,7 @@ body {
   grid-template-columns: 4ch max-content;
   gap: 12px;
   padding: 0 20px;
+  cursor: pointer;
 }
 
 .line-block {
@@ -379,17 +380,57 @@ textarea {
 }
 
 .line-comment {
-  background: #f9f7f3;
-  border: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+  background: transparent;
+  border: 0;
   border-radius: 0;
-  padding: 8px 10px;
+  padding: 0;
   font-size: 13px;
 }
 
+.line-comment-avatar {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  margin-top: 2px;
+}
+
+.line-comment-content {
+  min-width: 0;
+  position: relative;
+}
+
+.line-comment-content::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  top: 9px;
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 8px solid var(--accent-soft);
+}
+
 .line-comment-meta {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  padding: 6px 10px;
+  font-weight: 600;
+}
+
+.line-comment-body {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 10px;
 }
 
 .markdown {
@@ -451,8 +492,8 @@ textarea {
 }
 
 @media (prefers-color-scheme: dark) {
-  .line-comment {
-    background: #141820;
+  .line-comment-content::before {
+    border-right-color: #2a1b1e;
   }
 }
 
@@ -537,6 +578,7 @@ textarea {
   gap: 12px;
   padding: 0 20px;
   align-items: baseline;
+  cursor: pointer;
 }
 
 .diff-line .ln {
