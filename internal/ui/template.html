@@ -9,7 +9,7 @@
     {{.CSS}}
   </style>
 </head>
-<body class="theme-light">
+<body>
   <div class="app" live-hook="line-selector">
     {{with .Assigns}}
     {{$root := .}}
@@ -161,20 +161,6 @@
   </div>
 
   <script>
-    (function () {
-      const media = window.matchMedia("(prefers-color-scheme: dark)");
-      const applyTheme = (dark) => {
-        document.body.classList.toggle("theme-dark", dark);
-        document.body.classList.toggle("theme-light", !dark);
-      };
-      applyTheme(media.matches);
-      if (typeof media.addEventListener === "function") {
-        media.addEventListener("change", (ev) => applyTheme(ev.matches));
-      } else if (typeof media.addListener === "function") {
-        media.addListener((ev) => applyTheme(ev.matches));
-      }
-    })();
-
     window.Hooks = window.Hooks || {};
     window.Hooks["line-selector"] = {
       mounted: function () {

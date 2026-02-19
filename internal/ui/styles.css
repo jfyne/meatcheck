@@ -1,31 +1,15 @@
 :root {
-  --bg: #f6f4f1;
-  --panel: #ffffff;
-  --ink: #1b1b1b;
-  --muted: #6b6b6b;
-  --accent: #8b0000;
-  --accent-soft: #f2d9d9;
-  --warn: #a00000;
-  --line-hover: #f4e6e6;
-  --line-selected: #f2caca;
-  --line-commented: #f0bfbf;
-  --border: #e1d8cc;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f0b0c;
-    --panel: #161014;
-    --ink: #f3e9ea;
-    --muted: #b7a7aa;
-    --accent: #c00000;
-    --accent-soft: #3a1212;
-    --warn: #ff4d4d;
-    --line-hover: #241317;
-    --line-selected: #3a1515;
-    --line-commented: #452020;
-    --border: #2a1b1e;
-  }
+  --bg: #0f0b0c;
+  --panel: #161014;
+  --ink: #f3e9ea;
+  --muted: #b7a7aa;
+  --accent: #c00000;
+  --accent-soft: #3a1212;
+  --warn: #ff4d4d;
+  --line-hover: #241317;
+  --line-selected: #3a1515;
+  --line-commented: #452020;
+  --border: #2a1b1e;
 }
 
 * {
@@ -36,17 +20,11 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, Adwaita Sans, Cantarell, Ubuntu, roboto, noto, helvetica, arial, sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at top, #fff7e8 0%, var(--bg) 55%);
+  background: radial-gradient(circle at top, #1b2230 0%, var(--bg) 60%);
 }
 
 .serif {
   font-family: Iowan Old Style, Apple Garamond, Baskerville, Times New Roman, Droid Serif, Times, Source Serif Pro, serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background: radial-gradient(circle at top, #1b2230 0%, var(--bg) 60%);
-  }
 }
 
 .app {
@@ -208,7 +186,7 @@ body {
   justify-content: center;
   border-radius: 0;
   border: 1px solid var(--border);
-  background: #f4f4f4;
+  background: #1c222c;
   color: var(--ink);
   cursor: pointer;
   transition: transform 120ms ease, background 120ms ease, color 120ms ease;
@@ -229,14 +207,8 @@ body {
   border-color: var(--accent-soft);
 }
 
-@media (prefers-color-scheme: dark) {
-  .icon-btn {
-    background: #1c222c;
-  }
-
-  .icon-btn:hover {
-    background: #232a36;
-  }
+.icon-btn:hover {
+  background: #232a36;
 }
 
 .btn {
@@ -250,15 +222,9 @@ body {
 }
 
 .btn.secondary {
-  background: #f4f4f4;
+  background: #1c222c;
   color: var(--ink);
   border: 1px solid var(--border);
-}
-
-@media (prefers-color-scheme: dark) {
-  .btn.secondary {
-    background: #1c222c;
-  }
 }
 
 .content {
@@ -360,14 +326,8 @@ textarea {
   padding: 10px 12px;
   font-family: inherit;
   resize: vertical;
-  background: #fff;
+  background: #0f131a;
   color: var(--ink);
-}
-
-@media (prefers-color-scheme: dark) {
-  textarea {
-    background: #0f131a;
-  }
 }
 
 
@@ -453,7 +413,7 @@ textarea {
 }
 
 .markdown pre {
-  background: #f2efe9;
+  background: #0f131a;
   padding: 10px 12px;
   border-radius: 0;
   overflow: auto;
@@ -485,28 +445,10 @@ textarea {
   color: var(--accent);
 }
 
-@media (prefers-color-scheme: dark) {
-  .markdown pre {
-    background: #0f131a;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .line-comment-content::before {
-    border-right-color: #2a1b1e;
-  }
-}
-
 .inline-comment {
   padding: 16px 20px 20px 20px;
-  background: #fffaf2;
+  background: #141820;
   border-top: 1px dashed var(--border);
-}
-
-@media (prefers-color-scheme: dark) {
-  .inline-comment {
-    background: #141820;
-  }
 }
 
 .inline-meta {
