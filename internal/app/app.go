@@ -32,6 +32,7 @@ var (
 	templateHTML = mustReadEmbedded("template.html")
 	stylesCSS    = mustReadEmbedded("styles.css")
 	logoBytes    = mustReadEmbeddedBytes("logo.png")
+	avatarBytes  = mustReadEmbeddedBytes("ai.png")
 )
 
 var (
@@ -89,6 +90,8 @@ type ReviewModel struct {
 	CodeViewKey    string
 	RenderFile     bool
 	RenderComments bool
+	Prompt         string
+	PromptHTML     template.HTML
 	SelectionStart int
 	SelectionEnd   int
 	CommentDraft   string
@@ -104,9 +107,10 @@ type ReviewServer struct {
 }
 
 type Config struct {
-	Host  string
-	Port  int
-	Paths []string
+	Host   string
+	Port   int
+	Paths  []string
+	Prompt string
 }
 
 func PrintHelp(w io.Writer) {
@@ -118,6 +122,7 @@ Usage:
 Flags:
   --host   host to bind (default 127.0.0.1)
   --port   port to bind, 0 = random free port (default 0)
+  --prompt review prompt/question to display at top
   --help   show this help and exit
   --skill  print agent skill markdown and exit
 `)
@@ -137,6 +142,7 @@ func PrintSkill(w io.Writer) {
 		"\n"+
 		"```bash\n"+
 		"meatcheck <file1> <file2> ...\n"+
+		"meatcheck --prompt \"Focus on security and error handling\" <file1>\n"+
 		"```\n"+
 		"\n"+
 		"The CLI opens a browser UI with a GitHub-like review layout. The reviewer can select lines/ranges, add inline comments, and click **Finish**.\n"+
@@ -172,6 +178,10 @@ func Run(ctx context.Context, cfg Config) error {
 		SelectedPath:   files[0].Path,
 		RenderFile:     true,
 		RenderComments: true,
+		Prompt:         cfg.Prompt,
+	}
+	if strings.TrimSpace(cfg.Prompt) != "" {
+		model.PromptHTML = renderMarkdown(cfg.Prompt)
 	}
 	model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
 	model.Tree = buildTree(files, model.SelectedPath)
@@ -272,13 +282,16 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 	h.RenderHandler = func(ctx context.Context, rc *live.RenderContext) (io.Reader, error) {
 		css := buildCSS()
 		logoData := template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(logoBytes))
+		avatarData := template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(avatarBytes))
 		data := struct {
-			CSS  template.CSS
-			Logo template.URL
+			CSS    template.CSS
+			Logo   template.URL
+			Avatar template.URL
 			*live.RenderContext
 		}{
 			CSS:           template.CSS(css),
 			Logo:          logoData,
+			Avatar:        avatarData,
 			RenderContext: rc,
 		}
 		var buf bytes.Buffer

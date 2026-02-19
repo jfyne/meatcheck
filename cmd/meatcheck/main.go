@@ -13,6 +13,7 @@ func main() {
 	var (
 		host      = flag.String("host", "127.0.0.1", "host to bind")
 		port      = flag.Int("port", 0, "port to bind (0 = random)")
+		prompt    = flag.String("prompt", "", "review prompt/question to display at top")
 		showHelp  = flag.Bool("help", false, "show help")
 		showSkill = flag.Bool("skill", false, "print agent skill markdown")
 	)
@@ -34,9 +35,10 @@ func main() {
 	}
 
 	cfg := app.Config{
-		Host:  *host,
-		Port:  *port,
-		Paths: flag.Args(),
+		Host:   *host,
+		Port:   *port,
+		Paths:  flag.Args(),
+		Prompt: *prompt,
 	}
 	if err := app.Run(context.Background(), cfg); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())

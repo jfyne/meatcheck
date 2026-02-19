@@ -29,6 +29,9 @@ A local PR‑style review UI for LLM workflows. Run the `meatcheck` CLI with a s
 
 # or via go run during development
 go run ./cmd/meatcheck -- path/to/file1.go path/to/file2.css
+
+# include a review prompt/question
+./meatcheck --prompt "Focus on security and error handling" path/to/file1.go
 ```
 
 ## Keyboard Shortcuts
@@ -59,4 +62,3 @@ comments:
 ```bash
 go test ./...
 ```
-

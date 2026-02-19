@@ -13,26 +13,19 @@
   <div class="app" live-hook="line-selector">
     {{with .Assigns}}
     {{$root := .}}
-    <aside class="sidebar">
-      <div class="brand">
-        <img src="{{$.Logo}}" alt="Meatcheck logo" class="logo" />
-        <span>Meatcheck</span>
-      </div>
-      {{range .Tree}}
-        {{if .IsDir}}
-          <div class="tree-item dir" style="margin-left: {{mul .Depth 12}}px;">{{.Name}}</div>
-        {{else}}
-          <div class="tree-item file {{if .Selected}}selected{{end}}" style="margin-left: {{mul .Depth 12}}px;" live-click="select-file" live-value-path="{{.Path}}">
-            {{.Name}}
-          </div>
-        {{end}}
-      {{end}}
-    </aside>
-
-    <section class="main">
-      <header class="header">
-        <div class="path">{{.SelectedPath}}</div>
-        <div class="header-actions">
+    <header class="header">
+        <div class="header-top">
+          {{if .Prompt}}
+            <div class="prompt-inline">
+              <img src="{{$.Avatar}}" alt="Prompt avatar" class="prompt-avatar" />
+              {{if .PromptHTML}}
+                <div class="prompt-body markdown">{{.PromptHTML}}</div>
+              {{else}}
+                <div class="prompt-body">{{.Prompt}}</div>
+              {{end}}
+            </div>
+          {{end}}
+          <div class="header-actions">
           <button class="icon-btn {{if .RenderFile}}active{{end}}" live-click="toggle-file-render" title="Toggle file rendering" aria-label="Toggle file rendering">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M6 3h8l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -48,48 +41,71 @@
           </button>
           <button class="btn" live-click="finish">Finish</button>
         </div>
-      </header>
+        </div>
+    </header>
 
-      <main class="content">
-        <div class="code {{if $root.RenderFile}}chroma{{end}}" id="code-view-{{.CodeViewKey}}">
-          {{range .ViewFile.Lines}}
-            <div class="line-block" id="line-{{id $root.SelectedPath}}-{{.Number}}">
-              <div class="line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}">
-                <span class="ln" data-line="{{.Number}}">{{.Number}}</span>
-                <div class="code-text">{{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}</div>
-              </div>
-              {{if .Comments}}
-                <div class="line-comment-thread">
-                  {{range .Comments}}
-                    <div class="line-comment">
-                      <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
-                      {{if $root.RenderComments}}
-                        <div class="line-comment-body markdown">{{.Rendered}}</div>
-                      {{else}}
-                        <div class="line-comment-body">{{.Text}}</div>
-                      {{end}}
-                    </div>
-                  {{end}}
-                </div>
-              {{end}}
-              {{if and (gt $root.SelectionEnd 0) (eq .Number $root.SelectionEnd)}}
-                <div class="inline-comment">
-                  <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
-                    <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
-                    <textarea name="comment" placeholder="Leave a comment..."></textarea>
-                    {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
-                    <div class="comment-actions">
-                      <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
-                      <button class="btn" type="submit">Add Comment</button>
-                    </div>
-                  </form>
-                </div>
-              {{end}}
+    <div class="workspace">
+      <aside class="sidebar">
+        {{range .Tree}}
+          {{if .IsDir}}
+            <div class="tree-item dir" style="margin-left: {{mul .Depth 12}}px;">{{.Name}}</div>
+          {{else}}
+            <div class="tree-item file {{if .Selected}}selected{{end}}" style="margin-left: {{mul .Depth 12}}px;" live-click="select-file" live-value-path="{{.Path}}">
+              {{.Name}}
             </div>
           {{end}}
+        {{end}}
+        <div class="sidebar-brand">
+          <img src="{{$.Logo}}" alt="Meatcheck logo" class="logo" />
+          <span>Meatcheck</span>
         </div>
-      </main>
-    </section>
+      </aside>
+
+      <section class="main">
+        <div class="column-header">
+          <div class="path">{{.SelectedPath}}</div>
+        </div>
+        <main class="content">
+          <div class="code {{if $root.RenderFile}}chroma{{end}}" id="code-view-{{.CodeViewKey}}">
+            {{range .ViewFile.Lines}}
+              <div class="line-block" id="line-{{id $root.SelectedPath}}-{{.Number}}">
+                <div class="line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}">
+                  <span class="ln" data-line="{{.Number}}">{{.Number}}</span>
+                  <div class="code-text">{{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}</div>
+                </div>
+                {{if .Comments}}
+                  <div class="line-comment-thread">
+                    {{range .Comments}}
+                      <div class="line-comment">
+                        <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
+                        {{if $root.RenderComments}}
+                          <div class="line-comment-body markdown">{{.Rendered}}</div>
+                        {{else}}
+                          <div class="line-comment-body">{{.Text}}</div>
+                        {{end}}
+                      </div>
+                    {{end}}
+                  </div>
+                {{end}}
+                {{if and (gt $root.SelectionEnd 0) (eq .Number $root.SelectionEnd)}}
+                  <div class="inline-comment">
+                    <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
+                      <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
+                      <textarea name="comment" placeholder="Leave a comment..."></textarea>
+                      {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
+                      <div class="comment-actions">
+                        <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
+                        <button class="btn" type="submit">Add Comment</button>
+                      </div>
+                    </form>
+                  </div>
+                {{end}}
+              </div>
+            {{end}}
+          </div>
+        </main>
+      </section>
+    </div>
     {{end}}
   </div>
 
