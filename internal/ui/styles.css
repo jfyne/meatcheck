@@ -234,6 +234,23 @@ body {
   padding: 0;
 }
 
+.markdown-file-preview {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 24px 32px;
+  overflow: auto;
+}
+
+.markdown-file-body {
+  max-width: 980px;
+}
+
+.markdown-file-hint {
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .code {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -405,6 +422,40 @@ textarea {
   margin-bottom: 0;
 }
 
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin: 1.3em 0 0.5em 0;
+  line-height: 1.25;
+}
+
+.markdown h1 {
+  font-size: 32px;
+}
+
+.markdown h2 {
+  font-size: 24px;
+}
+
+.markdown h3 {
+  font-size: 20px;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0 0 10px 22px;
+}
+
+.markdown blockquote {
+  margin: 0 0 10px 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--accent-soft);
+  color: var(--muted);
+}
+
 .markdown code {
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
   background: rgba(45, 108, 223, 0.12);
@@ -443,6 +494,18 @@ textarea {
 
 .markdown a {
   color: var(--accent);
+}
+
+.markdown table {
+  border-collapse: collapse;
+  margin: 0 0 12px 0;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
 }
 
 .inline-comment {
