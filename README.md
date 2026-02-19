@@ -26,7 +26,7 @@ go install github.com/jfyne/meatcheck@latest
 ./meatcheck path/to/file1.go path/to/file2.css
 
 # or via go run during development
-go run ./cmd/meatcheck -- path/to/file1.go path/to/file2.css
+go run . -- path/to/file1.go path/to/file2.css
 
 # include a review prompt/question
 ./meatcheck --prompt "Focus on security and error handling" path/to/file1.go
@@ -51,7 +51,7 @@ Example (shape only):
 
 ```
 comments:
-  - path: cmd/meatcheck/main.go
+  - path: main.go
     start_line: 42
     end_line: 45
     text: "Consider splitting this helper into its own package."
