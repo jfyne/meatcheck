@@ -62,9 +62,19 @@ body {
   overflow: auto;
 }
 
-.sidebar h1 {
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 18px;
+  font-weight: 700;
   margin: 0 0 16px 0;
+}
+
+.logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .tree-item {

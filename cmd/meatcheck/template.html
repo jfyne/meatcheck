@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Meatcheck</title>
+  <link rel="icon" type="image/png" href="{{.Logo}}" />
   <style>
     {{.CSS}}
   </style>
@@ -13,7 +14,10 @@
     {{with .Assigns}}
     {{$root := .}}
     <aside class="sidebar">
-      <h1>Files</h1>
+      <div class="brand">
+        <img src="{{$.Logo}}" alt="Meatcheck logo" class="logo" />
+        <span>Meatcheck</span>
+      </div>
       {{range .Tree}}
         {{if .IsDir}}
           <div class="tree-item dir" style="margin-left: {{mul .Depth 12}}px;">{{.Name}}</div>

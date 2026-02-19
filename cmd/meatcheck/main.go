@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"html"
@@ -27,12 +28,13 @@ import (
 	"github.com/yuin/goldmark/extension"
 )
 
-//go:embed template.html styles.css
+//go:embed template.html styles.css logo.png
 var embeddedFiles embed.FS
 
 var (
 	templateHTML = mustReadEmbedded("template.html")
 	stylesCSS    = mustReadEmbedded("styles.css")
+	logoBytes    = mustReadEmbeddedBytes("logo.png")
 )
 
 var (
@@ -49,6 +51,14 @@ func mustReadEmbedded(path string) string {
 		panic(err)
 	}
 	return string(data)
+}
+
+func mustReadEmbeddedBytes(path string) []byte {
+	data, err := embeddedFiles.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+	return data
 }
 
 type Comment struct {
@@ -231,11 +241,14 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 	h := live.NewHandler()
 	h.RenderHandler = func(ctx context.Context, rc *live.RenderContext) (io.Reader, error) {
 		css := buildCSS()
+		logoData := template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(logoBytes))
 		data := struct {
-			CSS template.CSS
+			CSS  template.CSS
+			Logo template.URL
 			*live.RenderContext
 		}{
 			CSS:           template.CSS(css),
+			Logo:          logoData,
 			RenderContext: rc,
 		}
 		var buf bytes.Buffer
