@@ -74,7 +74,10 @@
                     <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
                     <textarea name="comment" placeholder="Leave a comment..."></textarea>
                     {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
-                    <button class="btn secondary" type="submit">Add Comment</button>
+                    <div class="comment-actions">
+                      <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
+                      <button class="btn" type="submit">Add Comment</button>
+                    </div>
                   </form>
                 </div>
               {{end}}
@@ -124,6 +127,16 @@
             window.Live.send("select-line", { line: line, shift: shift });
           }
         });
+        root.addEventListener("click", (ev) => {
+          const target = ev.target;
+          if (!target || !target.matches('button[live-click="cancel-comment"]')) return;
+          const form = target.closest("form");
+          if (!form) return;
+          const textarea = form.querySelector('textarea[name="comment"]');
+          if (textarea) {
+            textarea.value = "";
+          }
+        });
         root.addEventListener("keydown", (ev) => {
           const target = ev.target;
           if (!target || target.tagName !== "TEXTAREA") return;
@@ -138,6 +151,15 @@
             form.submit();
           }
         });
+      },
+      disconnected: function () {
+        try {
+          window.open("", "_self");
+        } catch (e) {}
+        window.close();
+        setTimeout(() => {
+          window.location.replace("about:blank");
+        }, 50);
       }
     };
   </script>

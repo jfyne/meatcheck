@@ -329,6 +329,16 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		return model, nil
 	})
 
+	h.HandleEvent("cancel-comment", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		model.CommentDraft = ""
+		model.Error = ""
+		model.SelectionStart = 0
+		model.SelectionEnd = 0
+		updateView(model)
+		return model, nil
+	})
+
 	h.HandleEvent("finish", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
 		model := getModel(s, rs.Model)
 		if s != nil {
@@ -564,11 +574,9 @@ func printSkill() {
 		"On finish, the CLI prints TOON to stdout with a list of comments:\n" +
 		"\n" +
 		"```\n" +
-		"comments:\n" +
-		"  - path: cmd/meatcheck/main.go\n" +
-		"    start_line: 10\n" +
-		"    end_line: 12\n" +
-		"    text: \"Consider extracting this helper.\"\n" +
+		"comments[2]{end_line,path,start_line,text}:\n" +
+		"  29,README.md,29,This is a comment\n" +
+		"  40,README.md,40,This is another Example comment\n" +
 		"```\n" +
 		"\n" +
 		"## Notes\n" +

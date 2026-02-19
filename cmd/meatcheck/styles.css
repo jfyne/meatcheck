@@ -3,28 +3,28 @@
   --panel: #ffffff;
   --ink: #1b1b1b;
   --muted: #6b6b6b;
-  --accent: #2d6cdf;
-  --accent-soft: #e3edff;
-  --warn: #c0392b;
-  --line-hover: #f2e9dd;
-  --line-selected: #ffe9c7;
-  --line-commented: #d5f0ff;
+  --accent: #8b0000;
+  --accent-soft: #f2d9d9;
+  --warn: #a00000;
+  --line-hover: #f4e6e6;
+  --line-selected: #f2caca;
+  --line-commented: #f0bfbf;
   --border: #e1d8cc;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1115;
-    --panel: #161a21;
-    --ink: #e6e8ee;
-    --muted: #9aa3b2;
-    --accent: #6aa6ff;
-    --accent-soft: #1c2740;
-    --warn: #ff7a6b;
-    --line-hover: #1e2430;
-    --line-selected: #2a2f3a;
-    --line-commented: #1f3144;
-    --border: #2a2f3a;
+    --bg: #0f0b0c;
+    --panel: #161014;
+    --ink: #f3e9ea;
+    --muted: #b7a7aa;
+    --accent: #c00000;
+    --accent-soft: #3a1212;
+    --warn: #ff4d4d;
+    --line-hover: #241317;
+    --line-selected: #3a1515;
+    --line-commented: #452020;
+    --border: #2a1b1e;
   }
 }
 
@@ -72,7 +72,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: 0;
   cursor: pointer;
   font-size: 14px;
 }
@@ -128,7 +128,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 0;
   border: 1px solid var(--border);
   background: #f4f4f4;
   color: var(--ink);
@@ -166,7 +166,7 @@ body {
   color: #fff;
   border: none;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: 0;
   cursor: pointer;
   font-weight: 600;
 }
@@ -187,31 +187,33 @@ body {
   display: grid;
   grid-template-columns: 1fr;
   overflow: auto;
-  padding: 16px 24px;
+  padding: 0;
 }
 
 .code {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px 0;
+  border-radius: 0;
+  padding: 0;
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
   font-size: 13px;
   line-height: 1.6;
   overflow: auto;
+  overflow-x: auto;
   tab-size: 4;
   -moz-tab-size: 4;
 }
 
 .line {
   display: grid;
-  grid-template-columns: 60px 1fr;
+  grid-template-columns: 4ch max-content;
   gap: 12px;
   padding: 0 20px;
 }
 
 .line-block {
   display: block;
+  min-width: max-content;
 }
 
 .line:hover {
@@ -233,6 +235,10 @@ body {
   padding-right: 8px;
   user-select: none;
   cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  width: 4ch;
 }
 
 .code-text {
@@ -264,12 +270,13 @@ body {
 .comment-form {
   display: grid;
   gap: 12px;
+  padding: 12px 0 16px 0;
 }
 
 textarea {
   width: 100%;
   min-height: 90px;
-  border-radius: 10px;
+  border-radius: 0;
   border: 1px solid var(--border);
   padding: 10px 12px;
   font-family: inherit;
@@ -296,7 +303,7 @@ textarea {
 .line-comment {
   background: #f9f7f3;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 8px 10px;
   font-size: 13px;
 }
@@ -323,13 +330,13 @@ textarea {
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
   background: rgba(45, 108, 223, 0.12);
   padding: 0 4px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .markdown pre {
   background: #f2efe9;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: auto;
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
   letter-spacing: 0;
@@ -372,7 +379,7 @@ textarea {
 }
 
 .inline-comment {
-  padding: 12px 20px 4px 20px;
+  padding: 16px 20px 20px 20px;
   background: #fffaf2;
   border-top: 1px dashed var(--border);
 }
@@ -387,6 +394,17 @@ textarea {
   font-size: 12px;
   color: var(--muted);
   margin-bottom: 6px;
+}
+
+.comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.comment-actions .btn {
+  width: auto;
+  min-width: 120px;
 }
 
 
