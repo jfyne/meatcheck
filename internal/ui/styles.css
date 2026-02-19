@@ -128,7 +128,7 @@ body {
 
 .main {
   display: grid;
-  grid-template-rows: 1fr;
+  grid-template-rows: auto 1fr;
   min-height: 0;
 }
 
@@ -507,4 +507,100 @@ textarea {
     border-bottom: 1px solid var(--border);
     max-height: 220px;
   }
+}
+
+.diff {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0;
+  overflow: auto;
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 4;
+  -moz-tab-size: 4;
+}
+
+.hunk-header {
+  padding: 6px 20px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.diff-line {
+  display: grid;
+  grid-template-columns: 4ch 4ch 1ch max-content;
+  gap: 12px;
+  padding: 0 20px;
+  align-items: baseline;
+}
+
+.diff-line .ln {
+  color: var(--muted);
+  text-align: right;
+  padding-right: 8px;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  width: 4ch;
+}
+
+.diff-line .ln.new {
+  cursor: pointer;
+}
+
+.diff-sign {
+  color: var(--muted);
+  text-align: center;
+  width: 1ch;
+}
+
+.diff-line[data-kind="add"] {
+  background: rgba(46, 160, 67, 0.12);
+}
+
+.diff-line[data-kind="del"] {
+  background: rgba(248, 81, 73, 0.16);
+}
+
+.diff-sign.add {
+  color: #2ea043;
+}
+
+.diff-sign.del {
+  color: #f85149;
+}
+
+.diff-line.selected {
+  background: var(--line-selected);
+}
+
+.diff-line.commented .ln.new {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.diff-line .code-text {
+  white-space: pre;
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  letter-spacing: 0;
+  word-spacing: 0;
+  font-variant-ligatures: none;
+}
+
+.diff-line .code-text * {
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  white-space: pre;
+  letter-spacing: 0;
+  word-spacing: 0;
+  font-variant-ligatures: none;
+}
+
+.diff-line:hover {
+  background: var(--line-hover);
 }
