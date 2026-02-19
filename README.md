@@ -50,11 +50,9 @@ On “Finish Review”, the app prints TOON to stdout and exits.
 Example (shape only):
 
 ```
-comments:
-  - path: main.go
-    start_line: 42
-    end_line: 45
-    text: "Consider splitting this helper into its own package."
+comments[2]{end_line,path,start_line,text}:
+  29,README.md,29,This is a comment
+  40,README.md,40,This is another Example comment
 ```
 
 ## Notes
