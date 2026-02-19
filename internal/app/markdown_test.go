@@ -51,13 +51,10 @@ func TestUpdateFileViewMarkdownDefaultsToRendered(t *testing.T) {
 
 func TestUpdateFileViewMarkdownCodeMode(t *testing.T) {
 	m := &ReviewModel{
-		Files:        []File{{Path: "README.md", PathSlash: "README.md", Lines: []string{"# Heading", "Hello"}}},
-		SelectedPath: "README.md",
-		RenderFile:   true,
-		ViewFile: ViewFile{
-			Path:             "README.md",
-			MarkdownRendered: false,
-		},
+		Files:                []File{{Path: "README.md", PathSlash: "README.md", Lines: []string{"# Heading", "Hello"}}},
+		SelectedPath:         "README.md",
+		RenderFile:           true,
+		MarkdownRenderByPath: map[string]bool{"README.md": false},
 	}
 
 	updateFileView(m)

@@ -1,3 +1,19 @@
+{{define "commentThread"}}
+  {{range .Comments}}
+    <div class="line-comment">
+      <img src="{{$.Logo}}" alt="Meatcheck logo" class="line-comment-avatar" />
+      <div class="line-comment-content">
+        <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
+        {{if $.Root.RenderComments}}
+          <div class="line-comment-body markdown">{{.Rendered}}</div>
+        {{else}}
+          <div class="line-comment-body">{{.Text}}</div>
+        {{end}}
+      </div>
+    </div>
+  {{end}}
+{{end}}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,19 +97,7 @@
         </div>
         {{if .Comments}}
           <div class="line-comment-thread">
-            {{range .Comments}}
-              <div class="line-comment">
-                <img src="{{$.Logo}}" alt="Meatcheck logo" class="line-comment-avatar" />
-                <div class="line-comment-content">
-                  <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
-                  {{if $root.RenderComments}}
-                    <div class="line-comment-body markdown">{{.Rendered}}</div>
-                  {{else}}
-                    <div class="line-comment-body">{{.Text}}</div>
-                  {{end}}
-                </div>
-              </div>
-            {{end}}
+            {{template "commentThread" (commentThreadData $root .Comments $.Logo)}}
           </div>
         {{end}}
         {{if and (gt $root.SelectionEnd 0) (eq .NewLine $root.SelectionEnd) (ne .Kind "del")}}
@@ -128,19 +132,7 @@
         </div>
         {{if .Comments}}
           <div class="line-comment-thread">
-            {{range .Comments}}
-              <div class="line-comment">
-                <img src="{{$.Logo}}" alt="Meatcheck logo" class="line-comment-avatar" />
-                <div class="line-comment-content">
-                  <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
-                  {{if $root.RenderComments}}
-                    <div class="line-comment-body markdown">{{.Rendered}}</div>
-                  {{else}}
-                    <div class="line-comment-body">{{.Text}}</div>
-                  {{end}}
-                </div>
-              </div>
-            {{end}}
+            {{template "commentThread" (commentThreadData $root .Comments $.Logo)}}
           </div>
         {{end}}
         {{if and (gt $root.SelectionEnd 0) (eq .Number $root.SelectionEnd)}}
@@ -196,7 +188,8 @@
         });
         root.addEventListener("click", (ev) => {
           const target = ev.target;
-          if (!target || !target.matches('button[live-click="cancel-comment"]')) return;
+          if (!target || !(target instanceof Element)) return;
+          if (!target.matches('button[live-click="cancel-comment"]')) return;
           const form = target.closest("form");
           if (!form) return;
           const textarea = form.querySelector('textarea[name="comment"]');
