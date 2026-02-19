@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Review</title>
+  <style>
+    {{.CSS}}
+  </style>
+</head>
+<body>
+  <div class="app" live-hook="line-selector">
+    {{with .Assigns}}
+    {{$root := .}}
+    <aside class="sidebar">
+      <h1>Files</h1>
+      {{range .Tree}}
+        {{if .IsDir}}
+          <div class="tree-item dir" style="margin-left: {{mul .Depth 12}}px;">{{.Name}}</div>
+        {{else}}
+          <div class="tree-item file {{if .Selected}}selected{{end}}" style="margin-left: {{mul .Depth 12}}px;" live-click="select-file" live-value-path="{{.Path}}">
+            {{.Name}}
+          </div>
+        {{end}}
+      {{end}}
+    </aside>
+
+    <section class="main">
+      <header class="header">
+        <div class="path">{{.SelectedPath}}</div>
+        <button class="btn" live-click="finish">Finish Review</button>
+      </header>
+
+      <main class="content">
+        <div class="code" id="code-view-{{.CodeViewKey}}">
+          {{range .ViewFile.Lines}}
+            <div class="line-block" id="line-{{id $root.SelectedPath}}-{{.Number}}">
+              <div class="line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}">
+                <span class="ln" data-line="{{.Number}}">{{.Number}}</span>
+                <span class="code-text">{{.Text}}</span>
+              </div>
+              {{if .Comments}}
+                <div class="line-comment-thread">
+                  {{range .Comments}}
+                    <div class="line-comment">
+                      <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
+                      <div class="line-comment-body">{{.Text}}</div>
+                    </div>
+                  {{end}}
+                </div>
+              {{end}}
+              {{if and (gt $root.SelectionEnd 0) (eq .Number $root.SelectionEnd)}}
+                <div class="inline-comment">
+                  <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
+                    <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
+                    <textarea name="comment" placeholder="Leave a comment..."></textarea>
+                    {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
+                    <button class="btn secondary" type="submit">Add Comment</button>
+                  </form>
+                </div>
+              {{end}}
+            </div>
+          {{end}}
+        </div>
+      </main>
+    </section>
+    {{end}}
+  </div>
+
+  <script>
+    window.Hooks = window.Hooks || {};
+    window.Hooks["line-selector"] = {
+      mounted: function () {
+        const root = this.el;
+        this.handleEvent("close-tab", () => {
+          try {
+            window.open("", "_self");
+          } catch (e) {}
+          window.close();
+          setTimeout(() => {
+            window.location.replace("about:blank");
+          }, 50);
+        });
+        root.addEventListener("click", (ev) => {
+          const target = ev.target;
+          if (!target.classList.contains("ln")) return;
+          const line = Number(target.dataset.line || 0);
+          if (!line) return;
+          const shift = ev.shiftKey ? "1" : "";
+          if (window.Live && typeof window.Live.send === "function") {
+            window.Live.send("select-line", { line: line, shift: shift });
+          }
+        });
+        root.addEventListener("keydown", (ev) => {
+          const target = ev.target;
+          if (!target || target.tagName !== "TEXTAREA") return;
+          if (target.name !== "comment") return;
+          if (!(ev.ctrlKey || ev.metaKey) || ev.key !== "Enter") return;
+          const form = target.closest("form");
+          if (!form) return;
+          ev.preventDefault();
+          if (typeof form.requestSubmit === "function") {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+        });
+      }
+    };
+  </script>
+  <script defer src="/live.js"></script>
+</body>
+</html>
