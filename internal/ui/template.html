@@ -162,8 +162,21 @@
   <script>
     window.Hooks = window.Hooks || {};
     window.Hooks["line-selector"] = {
+      focusCommentTextarea: function () {
+        const textarea = this.el.querySelector('.inline-comment textarea[name="comment"]');
+        if (!textarea) return;
+        if (document.activeElement === textarea) return;
+        requestAnimationFrame(() => {
+          try {
+            textarea.focus({ preventScroll: true });
+          } catch (e) {
+            textarea.focus();
+          }
+        });
+      },
       mounted: function () {
         const root = this.el;
+        this.focusCommentTextarea();
         this.handleEvent("close-tab", () => {
           try {
             window.open("", "_self");
@@ -211,6 +224,9 @@
             form.submit();
           }
         });
+      },
+      updated: function () {
+        this.focusCommentTextarea();
       },
       disconnected: function () {
         try {
