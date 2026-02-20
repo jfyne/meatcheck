@@ -49,6 +49,22 @@ func TestUpdateFileViewMarkdownDefaultsToRendered(t *testing.T) {
 	}
 }
 
+func TestRenderMarkdownDocumentRewritesRelativeImagePaths(t *testing.T) {
+	md := "![logo](internal/ui/logo.png)"
+	html := string(renderMarkdownDocument("README.md", md))
+	if !strings.Contains(html, `/file?path=internal%2Fui%2Flogo.png`) {
+		t.Fatalf("expected rewritten local file URL, got %q", html)
+	}
+}
+
+func TestRenderMarkdownDocumentKeepsExternalImagePaths(t *testing.T) {
+	md := "![logo](https://example.com/logo.png)"
+	html := string(renderMarkdownDocument("README.md", md))
+	if !strings.Contains(html, `https://example.com/logo.png`) {
+		t.Fatalf("expected external URL unchanged, got %q", html)
+	}
+}
+
 func TestUpdateFileViewMarkdownCodeMode(t *testing.T) {
 	m := &ReviewModel{
 		Files:                []File{{Path: "README.md", PathSlash: "README.md", Lines: []string{"# Heading", "Hello"}}},

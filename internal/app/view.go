@@ -34,7 +34,7 @@ func updateFileView(model *ReviewModel) {
 			viewFile.MarkdownRendered = rendered
 		}
 		if viewFile.MarkdownFile && viewFile.MarkdownRendered {
-			viewFile.MarkdownHTML = renderMarkdown(strings.Join(selectedFile.Lines, "\n"))
+			viewFile.MarkdownHTML = renderMarkdownDocument(selectedFile.Path, strings.Join(selectedFile.Lines, "\n"))
 			model.ViewFile = viewFile
 			model.SelectedLabel = formatSelectedLabel(model.SelectedPath, model.Ranges[model.SelectedPath])
 			return

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -112,6 +113,11 @@ func Run(ctx context.Context, cfg Config) error {
 
 	mux := http.NewServeMux()
 	mux.Handle("/live.js", live.Javascript{})
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	mux.Handle("/file", localFileHandler(wd))
 	mux.Handle("/", live.NewHttpHandler(ctx, h))
 
 	srv := &http.Server{Handler: mux}
@@ -330,4 +336,35 @@ func getModel(s *live.Socket, fallback *ReviewModel) *ReviewModel {
 		}
 	}
 	return fallback
+}
+
+func localFileHandler(root string) http.Handler {
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		rootAbs = root
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rel := strings.TrimSpace(r.URL.Query().Get("path"))
+		if rel == "" {
+			http.Error(w, "missing path", http.StatusBadRequest)
+			return
+		}
+		rel = filepath.Clean(rel)
+		if filepath.IsAbs(rel) || strings.HasPrefix(rel, "..") {
+			http.Error(w, "invalid path", http.StatusBadRequest)
+			return
+		}
+		target := filepath.Join(rootAbs, rel)
+		targetAbs, err := filepath.Abs(target)
+		if err != nil {
+			http.Error(w, "invalid path", http.StatusBadRequest)
+			return
+		}
+		relToRoot, err := filepath.Rel(rootAbs, targetAbs)
+		if err != nil || strings.HasPrefix(relToRoot, "..") {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		http.ServeFile(w, r, targetAbs)
+	})
 }
