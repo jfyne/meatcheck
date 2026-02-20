@@ -25,7 +25,7 @@
     {{.CSS}}
   </style>
 </head>
-<body>
+<body class="theme-dark">
   <div class="app" live-hook="line-selector">
     {{with .Assigns}}
     {{$root := .}}
@@ -104,7 +104,7 @@
           <div class="inline-comment">
             <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
               <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
-              <textarea name="comment" placeholder="Leave a comment..."></textarea>
+              <textarea name="comment" placeholder="Leave a comment..." autofocus></textarea>
               {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
               <div class="comment-actions">
                 <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
@@ -139,7 +139,7 @@
           <div class="inline-comment">
             <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
               <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
-              <textarea name="comment" placeholder="Leave a comment..."></textarea>
+              <textarea name="comment" placeholder="Leave a comment..." autofocus></textarea>
               {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
               <div class="comment-actions">
                 <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
@@ -162,21 +162,8 @@
   <script>
     window.Hooks = window.Hooks || {};
     window.Hooks["line-selector"] = {
-      focusCommentTextarea: function () {
-        const textarea = this.el.querySelector('.inline-comment textarea[name="comment"]');
-        if (!textarea) return;
-        if (document.activeElement === textarea) return;
-        requestAnimationFrame(() => {
-          try {
-            textarea.focus({ preventScroll: true });
-          } catch (e) {
-            textarea.focus();
-          }
-        });
-      },
       mounted: function () {
         const root = this.el;
-        this.focusCommentTextarea();
         this.handleEvent("close-tab", () => {
           try {
             window.open("", "_self");
@@ -224,9 +211,6 @@
             form.submit();
           }
         });
-      },
-      updated: function () {
-        this.focusCommentTextarea();
       },
       disconnected: function () {
         try {
