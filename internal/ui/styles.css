@@ -350,6 +350,10 @@ textarea {
   padding: 8px 20px 12px 92px;
   background: var(--panel);
   border-left: 3px solid var(--accent);
+  position: sticky;
+  left: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .line-comment {
@@ -508,6 +512,10 @@ textarea {
   padding: 16px 20px 20px 20px;
   background: #141820;
   border-top: 1px dashed var(--border);
+  position: sticky;
+  left: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .inline-meta {
