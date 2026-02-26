@@ -4,6 +4,9 @@
 
 A local PR‑style review UI for LLM workflows. Run the `meatcheck` CLI with a set of files, review them in a browser, leave inline comments, and get structured feedback on stdout when you finish.
 
+![Screenshot 1](mc1.png)
+![Screenshot 2](mc2.png)
+
 ## Features
 
 - File tree + code view UI similar to GitHub PR reviews
