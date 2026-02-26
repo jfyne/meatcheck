@@ -1,6 +1,6 @@
 # Meatcheck
 
-![Meatcheck logo](internal/ui/logo.png)
+<img src="internal/ui/logo.png" width="300" />
 
 A local PR‑style review UI for LLM workflows. Run the `meatcheck` CLI with a set of files, review them in a browser, leave inline comments, and get structured feedback on stdout when you finish.
 
