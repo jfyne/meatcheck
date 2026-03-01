@@ -395,6 +395,9 @@ textarea {
 }
 
 .line-comment-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 12px;
   color: var(--ink);
   background: var(--accent-soft);
@@ -654,4 +657,41 @@ textarea {
 
 .diff-line:hover {
   background: var(--line-hover);
+}
+
+.line-comment-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.comment-action-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  line-height: 1;
+  border-radius: 0;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.comment-action-btn:hover {
+  color: var(--ink);
+  border-color: var(--border);
+}
+
+.comment-action-btn.delete:hover {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.edit-comment-form {
+  padding: 10px;
+  border: 1px solid var(--border);
+}
+
+.edit-comment-form textarea {
+  min-height: 70px;
 }

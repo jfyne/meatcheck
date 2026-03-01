@@ -82,6 +82,111 @@ func TestHTTPRenderDiffModeCommentFormAutofocus(t *testing.T) {
 	}
 }
 
+// buildCommentModel returns a ReviewModel in file mode with a single comment
+// (ID 1, path "test.go", line 1, text "hello") ready for rendering.
+// Callers may mutate the returned model before calling renderReviewHTML.
+func buildCommentModel() *ReviewModel {
+	return &ReviewModel{
+		Files: []File{{
+			Path:      "test.go",
+			PathSlash: "test.go",
+			Lines:     []string{"package main"},
+		}},
+		SelectedPath:         "test.go",
+		Mode:                 ModeFile,
+		RenderFile:           true,
+		RenderComments:       true,
+		NextCommentID:        1,
+		Comments: []Comment{
+			{ID: 1, Path: "test.go", StartLine: 1, EndLine: 1, Text: "hello"},
+		},
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+}
+
+// TestRenderCommentEditDeleteButtons verifies that each rendered comment
+// displays an edit button (live-click="start-edit-comment") and a delete
+// button (live-click="delete-comment"), both carrying the comment's ID.
+//
+// Scenario: Edit and delete buttons visible on comments
+func TestRenderCommentEditDeleteButtons(t *testing.T) {
+	model := buildCommentModel()
+	model.Tree = buildTree(model.Files, model.SelectedPath)
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, `live-click="start-edit-comment"`) {
+		t.Errorf("expected start-edit-comment button in rendered HTML, got: %q", html)
+	}
+	if !strings.Contains(html, `live-click="delete-comment"`) {
+		t.Errorf("expected delete-comment button in rendered HTML, got: %q", html)
+	}
+	if !strings.Contains(html, `live-value-id="1"`) {
+		t.Errorf("expected live-value-id=\"1\" on comment action buttons, got: %q", html)
+	}
+}
+
+// TestRenderCommentEditForm verifies that when EditingCommentID matches a
+// comment's ID the rendered HTML shows an edit form pre-filled with the
+// comment text, and hides the edit/delete action buttons for that comment.
+//
+// Scenario: Edit form appears with pre-filled text
+// Scenario: Buttons hidden during editing
+func TestRenderCommentEditForm(t *testing.T) {
+	model := buildCommentModel()
+	model.EditingCommentID = 1
+	model.Tree = buildTree(model.Files, model.SelectedPath)
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, `live-submit="edit-comment"`) {
+		t.Errorf("expected edit-comment form in rendered HTML, got: %q", html)
+	}
+	if !strings.Contains(html, `<textarea`) {
+		t.Errorf("expected textarea in edit form, got: %q", html)
+	}
+	if !strings.Contains(html, `hello`) {
+		t.Errorf("expected comment text \"hello\" pre-filled in textarea, got: %q", html)
+	}
+	if !strings.Contains(html, `name="id"`) {
+		t.Errorf("expected hidden id input (name=\"id\") in edit form, got: %q", html)
+	}
+	if !strings.Contains(html, `value="1"`) {
+		t.Errorf("expected value=\"1\" on hidden id input, got: %q", html)
+	}
+	// Edit and delete action buttons should be hidden while editing.
+	if strings.Contains(html, `live-click="start-edit-comment"`) {
+		t.Errorf("start-edit-comment button should be hidden when comment is being edited, got: %q", html)
+	}
+	if strings.Contains(html, `live-click="delete-comment"`) {
+		t.Errorf("delete-comment button should be hidden when comment is being edited, got: %q", html)
+	}
+}
+
+// TestRenderCommentNotEditing verifies that when EditingCommentID is 0 (no
+// comment being edited) the edit/delete action buttons are rendered and no
+// edit form is present.
+//
+// Scenario: Edit and delete buttons visible on comments (not editing state)
+func TestRenderCommentNotEditing(t *testing.T) {
+	model := buildCommentModel()
+	model.EditingCommentID = 0
+	model.Tree = buildTree(model.Files, model.SelectedPath)
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, `live-click="start-edit-comment"`) {
+		t.Errorf("expected start-edit-comment button when not editing, got: %q", html)
+	}
+	if !strings.Contains(html, `live-click="delete-comment"`) {
+		t.Errorf("expected delete-comment button when not editing, got: %q", html)
+	}
+	if strings.Contains(html, `live-submit="edit-comment"`) {
+		t.Errorf("edit form should not be present when not editing, got: %q", html)
+	}
+}
+
 func renderReviewHTML(t *testing.T, model *ReviewModel) string {
 	t.Helper()
 

@@ -3,11 +3,31 @@
     <div class="line-comment">
       <img src="{{$.Logo}}" alt="Meatcheck logo" class="line-comment-avatar" />
       <div class="line-comment-content">
-        <div class="line-comment-meta">{{.Path}}:{{.StartLine}}-{{.EndLine}}</div>
-        {{if $.Root.RenderComments}}
-          <div class="line-comment-body markdown">{{.Rendered}}</div>
+        <div class="line-comment-meta">
+          <span>{{.Path}}:{{.StartLine}}-{{.EndLine}}</span>
+          {{if not .Editing}}
+            <span class="line-comment-actions">
+              <button class="comment-action-btn" live-click="start-edit-comment" live-value-id="{{.ID}}" title="Edit comment" aria-label="Edit comment">&#9998;</button>
+              <button class="comment-action-btn delete" live-click="delete-comment" live-value-id="{{.ID}}" title="Delete comment" aria-label="Delete comment">&times;</button>
+            </span>
+          {{end}}
+        </div>
+        {{if .Editing}}
+          <form class="comment-form edit-comment-form" live-submit="edit-comment">
+            <input type="hidden" name="id" value="{{.ID}}" />
+            <textarea name="comment" autofocus>{{.Text}}</textarea>
+            {{if $.Root.Error}}<div class="error">{{$.Root.Error}}</div>{{end}}
+            <div class="comment-actions">
+              <button class="btn secondary" type="button" live-click="cancel-edit-comment">Cancel</button>
+              <button class="btn" type="submit">Save</button>
+            </div>
+          </form>
         {{else}}
-          <div class="line-comment-body">{{.Text}}</div>
+          {{if $.Root.RenderComments}}
+            <div class="line-comment-body markdown">{{.Rendered}}</div>
+          {{else}}
+            <div class="line-comment-body">{{.Text}}</div>
+          {{end}}
         {{end}}
       </div>
     </div>
@@ -189,7 +209,7 @@
         root.addEventListener("click", (ev) => {
           const target = ev.target;
           if (!target || !(target instanceof Element)) return;
-          if (!target.matches('button[live-click="cancel-comment"]')) return;
+          if (!target.matches('button[live-click="cancel-comment"], button[live-click="cancel-edit-comment"]')) return;
           const form = target.closest("form");
           if (!form) return;
           const textarea = form.querySelector('textarea[name="comment"]');

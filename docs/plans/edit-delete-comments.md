@@ -63,7 +63,7 @@ Add the ability for users to edit and delete comments they have already placed o
 
 ### Backend: Model Changes
 
-- [ ] Add `ID` to `Comment`, `NextCommentID`/`EditingCommentID` to `ReviewModel`, `Editing` to `ViewComment` (`internal/app/model.go`) [Stage 1]
+- [x] Add `ID` to `Comment`, `NextCommentID`/`EditingCommentID` to `ReviewModel`, `Editing` to `ViewComment` (`internal/app/model.go`) [Stage 1]
   - Files: `internal/app/model.go` (modifies)
   - Add `ID int \`json:"id"\`` as first field on `Comment`
   - Add `NextCommentID int` and `EditingCommentID int` to `ReviewModel` (near `Comments` field)
@@ -72,7 +72,7 @@ Add the ability for users to edit and delete comments they have already placed o
 
 ### Backend: View Projection
 
-- [ ] Thread `editingID` through view projection functions (`internal/app/view.go`) [Stage 1]
+- [x] Thread `editingID` through view projection functions (`internal/app/view.go`) [Stage 1]
   - Files: `internal/app/view.go` (modifies)
   - Add `editingID int` parameter to: `projectLineComments`, `buildSingleViewLine`, `buildViewLines`, `buildViewLinesWithRanges`, `buildViewDiff`
   - In `projectLineComments`, set `Editing: c.ID == editingID` on each `ViewComment`
@@ -80,7 +80,7 @@ Add the ability for users to edit and delete comments they have already placed o
 
 ### Backend: Event Handlers
 
-- [ ] Assign ID on add-comment, add edit/delete/start-edit/cancel-edit handlers (`internal/app/app.go`) [Stage 1]
+- [x] Assign ID on add-comment, add edit/delete/start-edit/cancel-edit handlers (`internal/app/app.go`) [Stage 1]
   - Files: `internal/app/app.go` (modifies)
   - **add-comment** (modify existing): increment `model.NextCommentID++` and set `ID: model.NextCommentID` on the new comment
   - **start-edit-comment** (new): set `model.EditingCommentID = p.Int("id")`, call `updateView`
@@ -91,7 +91,7 @@ Add the ability for users to edit and delete comments they have already placed o
 
 ### Backend: Fix Existing Tests
 
-- [ ] Update existing tests for new function signatures (`internal/app/view_diff_test.go`) [Stage 1]
+- [x] Update existing tests for new function signatures (`internal/app/view_diff_test.go`) [Stage 1]
   - Files: `internal/app/view_diff_test.go` (modifies)
   - Add `ID: 1` to `Comment` literal
   - Add `editingID` (0) argument to `buildViewDiff` call
@@ -99,7 +99,7 @@ Add the ability for users to edit and delete comments they have already placed o
 
 ### Frontend: Template
 
-- [ ] Add edit/delete buttons and edit form to `commentThread` template (`internal/ui/template.html`) [Stage 2]
+- [x] Add edit/delete buttons and edit form to `commentThread` template (`internal/ui/template.html`) [Stage 2]
   - Files: `internal/ui/template.html` (modifies)
   - In `commentThread` template:
     - Restructure `.line-comment-meta` to use flex layout with a `<span>` for the path label and a `<span class="line-comment-actions">` for buttons
@@ -113,7 +113,7 @@ Add the ability for users to edit and delete comments they have already placed o
 
 ### Frontend: CSS
 
-- [ ] Add styles for comment action buttons and edit form (`internal/ui/styles.css`) [Stage 2]
+- [x] Add styles for comment action buttons and edit form (`internal/ui/styles.css`) [Stage 2]
   - Files: `internal/ui/styles.css` (modifies)
   - Update `.line-comment-meta` to `display: flex; align-items: center; justify-content: space-between`
   - `.line-comment-actions` — inline-flex container with small gap
@@ -123,7 +123,7 @@ Add the ability for users to edit and delete comments they have already placed o
 
 ### Backend: New Tests
 
-- [ ] Write tests for comment edit/delete logic (`internal/app/comment_test.go`) [Stage 1]
+- [x] Write tests for comment edit/delete logic (`internal/app/comment_test.go`) [Stage 1]
   - Files: `internal/app/comment_test.go` (creates)
   - Test cases:
     - Adding comments assigns sequential IDs (1, 2, 3...)
