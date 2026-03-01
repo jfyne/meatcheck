@@ -370,16 +370,16 @@ func deleteComment(model *ReviewModel, id int) {
 	for i := range model.Comments {
 		if model.Comments[i].ID == id {
 			model.Comments = append(model.Comments[:i], model.Comments[i+1:]...)
-			break
+			if model.EditingCommentID == id {
+				model.EditingCommentID = 0
+			}
+			return
 		}
-	}
-	if model.EditingCommentID == id {
-		model.EditingCommentID = 0
 	}
 }
 
 func editComment(model *ReviewModel, id int, text string) error {
-	if strings.TrimSpace(text) == "" {
+	if text == "" {
 		return fmt.Errorf("comment text is required")
 	}
 	for i := range model.Comments {

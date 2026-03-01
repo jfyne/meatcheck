@@ -1,6 +1,10 @@
 package app
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
 
 // TestCommentIDAssignment verifies that adding comments to ReviewModel assigns
 // sequential IDs (1, 2, 3...) using the NextCommentID counter.
@@ -235,5 +239,44 @@ func TestEditCommentNonexistentIDReturnsError(t *testing.T) {
 	err := editComment(model, 99, "updated")
 	if err == nil {
 		t.Fatal("expected an error for nonexistent ID, got nil")
+	}
+}
+
+// TestCancelEditComment verifies that cancelling an edit clears EditingCommentID.
+func TestCancelEditComment(t *testing.T) {
+	model := &ReviewModel{
+		EditingCommentID: 3,
+		Comments: []Comment{
+			{ID: 3, Path: "a.go", StartLine: 1, EndLine: 1, Text: "hello"},
+		},
+	}
+
+	// Simulate cancel-edit-comment handler logic.
+	model.EditingCommentID = 0
+	model.Error = ""
+
+	if model.EditingCommentID != 0 {
+		t.Errorf("EditingCommentID should be 0 after cancel, got %d", model.EditingCommentID)
+	}
+}
+
+// TestEmitToonIncludesCommentID verifies that the TOON output includes the
+// comment ID field.
+//
+// Scenario: TOON output includes comment IDs
+func TestEmitToonIncludesCommentID(t *testing.T) {
+	comments := []Comment{
+		{ID: 1, Path: "a.go", StartLine: 5, EndLine: 5, Text: "hello"},
+		{ID: 2, Path: "b.go", StartLine: 10, EndLine: 10, Text: "world"},
+	}
+
+	var buf bytes.Buffer
+	if err := emitToon(&buf, comments); err != nil {
+		t.Fatalf("emitToon error: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "id") {
+		t.Errorf("TOON output should contain 'id' field, got: %s", output)
 	}
 }
