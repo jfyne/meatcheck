@@ -43,7 +43,7 @@ func updateFileView(model *ReviewModel) {
 		if model.RenderFile {
 			rendered = codeRenderer.RenderLines(selectedFile.Path, selectedFile.Lines)
 		}
-		viewFile.Lines = buildViewLinesWithRanges(selectedFile, model.Comments, model.SelectionStart, model.SelectionEnd, rendered, model.Ranges[selectedFile.Path])
+		viewFile.Lines = buildViewLinesWithRanges(selectedFile, model.Comments, model.SelectionStart, model.SelectionEnd, rendered, model.Ranges[selectedFile.Path], model.EditingCommentID)
 	}
 	model.ViewFile = viewFile
 	model.SelectedLabel = formatSelectedLabel(model.SelectedPath, model.Ranges[model.SelectedPath])
@@ -53,15 +53,15 @@ func updateDiffView(model *ReviewModel) {
 	diffFile := findDiffFile(model.DiffFiles, model.SelectedPath)
 	viewDiff := ViewDiffFile{Path: model.SelectedPath}
 	if diffFile != nil {
-		viewDiff = buildViewDiff(diffFile, model.Comments, model.SelectionStart, model.SelectionEnd, model.RenderFile)
+		viewDiff = buildViewDiff(diffFile, model.Comments, model.SelectionStart, model.SelectionEnd, model.RenderFile, model.EditingCommentID)
 	}
 	model.ViewDiff = viewDiff
 	model.SelectedLabel = model.SelectedPath
 }
 
-func buildViewLinesWithRanges(file *File, comments []Comment, start, end int, rendered []template.HTML, ranges []LineRange) []ViewLine {
+func buildViewLinesWithRanges(file *File, comments []Comment, start, end int, rendered []template.HTML, ranges []LineRange, editingID int) []ViewLine {
 	if len(ranges) == 0 {
-		return buildViewLines(file, comments, start, end, rendered)
+		return buildViewLines(file, comments, start, end, rendered, editingID)
 	}
 	norm := normalizeRanges(ranges)
 	lines := make([]ViewLine, 0, len(file.Lines))
@@ -73,17 +73,17 @@ func buildViewLinesWithRanges(file *File, comments []Comment, start, end int, re
 			r.End = len(file.Lines)
 		}
 		for i := r.Start - 1; i < r.End; i++ {
-			lines = append(lines, buildSingleViewLine(file, comments, start, end, rendered, i))
+			lines = append(lines, buildSingleViewLine(file, comments, start, end, rendered, i, editingID))
 		}
 	}
 	return lines
 }
 
-func buildSingleViewLine(file *File, comments []Comment, start, end int, rendered []template.HTML, idx int) ViewLine {
+func buildSingleViewLine(file *File, comments []Comment, start, end int, rendered []template.HTML, idx int, editingID int) ViewLine {
 	lineNum := idx + 1
 	raw := file.Lines[idx]
 	selected := start > 0 && end > 0 && lineNum >= start && lineNum <= end
-	commented, lineComments := projectLineComments(file.Path, lineNum, comments)
+	commented, lineComments := projectLineComments(file.Path, lineNum, comments, editingID)
 
 	lineHTML := template.HTML("")
 	if len(rendered) > idx {
@@ -99,15 +99,15 @@ func buildSingleViewLine(file *File, comments []Comment, start, end int, rendere
 	}
 }
 
-func buildViewLines(file *File, comments []Comment, start, end int, rendered []template.HTML) []ViewLine {
+func buildViewLines(file *File, comments []Comment, start, end int, rendered []template.HTML, editingID int) []ViewLine {
 	lines := make([]ViewLine, 0, len(file.Lines))
 	for i := range file.Lines {
-		lines = append(lines, buildSingleViewLine(file, comments, start, end, rendered, i))
+		lines = append(lines, buildSingleViewLine(file, comments, start, end, rendered, i, editingID))
 	}
 	return lines
 }
 
-func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bool) ViewDiffFile {
+func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bool, editingID int) ViewDiffFile {
 	view := ViewDiffFile{Path: file.Path}
 	for _, h := range file.Hunks {
 		hdr := fmt.Sprintf("@@ -%d,%d +%d,%d @@", h.OldStart, h.OldCount, h.NewStart, h.NewCount)
@@ -135,7 +135,7 @@ func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bo
 				line.Selected = true
 			}
 			if dl.NewLine > 0 {
-				line.Commented, line.Comments = projectLineComments(file.Path, dl.NewLine, comments)
+				line.Commented, line.Comments = projectLineComments(file.Path, dl.NewLine, comments, editingID)
 			}
 			if !selectable {
 				line.Selected = false
@@ -147,7 +147,7 @@ func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bo
 	return view
 }
 
-func projectLineComments(path string, lineNum int, comments []Comment) (bool, []ViewComment) {
+func projectLineComments(path string, lineNum int, comments []Comment, editingID int) (bool, []ViewComment) {
 	commented := false
 	lineComments := make([]ViewComment, 0)
 	for _, c := range comments {
@@ -161,6 +161,7 @@ func projectLineComments(path string, lineNum int, comments []Comment) (bool, []
 			lineComments = append(lineComments, ViewComment{
 				Comment:  c,
 				Rendered: renderMarkdown(c.Text),
+				Editing:  c.ID == editingID,
 			})
 		}
 	}

@@ -284,7 +284,9 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 			model.Error = "select a line or range first"
 			return model, nil
 		}
+		model.NextCommentID++
 		model.Comments = append(model.Comments, Comment{
+			ID:        model.NextCommentID,
 			Path:      model.SelectedPath,
 			StartLine: model.SelectionStart,
 			EndLine:   model.SelectionEnd,
@@ -308,6 +310,44 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		return model, nil
 	})
 
+	h.HandleEvent("start-edit-comment", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		model.EditingCommentID = p.Int("id")
+		model.Error = ""
+		updateView(model)
+		return model, nil
+	})
+
+	h.HandleEvent("edit-comment", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		id := p.Int("id")
+		text := strings.TrimSpace(p.String("comment"))
+		if err := editComment(model, id, text); err != nil {
+			model.Error = err.Error()
+			return model, nil
+		}
+		model.Error = ""
+		updateView(model)
+		return model, nil
+	})
+
+	h.HandleEvent("delete-comment", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		id := p.Int("id")
+		deleteComment(model, id)
+		model.Error = ""
+		updateView(model)
+		return model, nil
+	})
+
+	h.HandleEvent("cancel-edit-comment", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		model.EditingCommentID = 0
+		model.Error = ""
+		updateView(model)
+		return model, nil
+	})
+
 	h.HandleEvent("finish", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
 		model := getModel(s, rs.Model)
 		if s != nil {
@@ -324,6 +364,32 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 	})
 
 	return h
+}
+
+func deleteComment(model *ReviewModel, id int) {
+	for i := range model.Comments {
+		if model.Comments[i].ID == id {
+			model.Comments = append(model.Comments[:i], model.Comments[i+1:]...)
+			break
+		}
+	}
+	if model.EditingCommentID == id {
+		model.EditingCommentID = 0
+	}
+}
+
+func editComment(model *ReviewModel, id int, text string) error {
+	if strings.TrimSpace(text) == "" {
+		return fmt.Errorf("comment text is required")
+	}
+	for i := range model.Comments {
+		if model.Comments[i].ID == id {
+			model.Comments[i].Text = text
+			model.EditingCommentID = 0
+			return nil
+		}
+	}
+	return fmt.Errorf("comment not found")
 }
 
 func getModel(s *live.Socket, fallback *ReviewModel) *ReviewModel {

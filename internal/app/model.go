@@ -6,6 +6,7 @@ import (
 )
 
 type Comment struct {
+	ID        int    `json:"id"`
 	Path      string `json:"path"`
 	StartLine int    `json:"start_line"`
 	EndLine   int    `json:"end_line"`
@@ -74,6 +75,7 @@ type ViewDiffFile struct {
 type ViewComment struct {
 	Comment
 	Rendered template.HTML
+	Editing  bool
 }
 
 type LineRange struct {
@@ -97,6 +99,8 @@ type ReviewModel struct {
 	SelectionEnd         int
 	CommentDraft         string
 	Comments             []Comment
+	NextCommentID        int
+	EditingCommentID     int
 	Ranges               map[string][]LineRange
 	MarkdownRenderByPath map[string]bool
 	ViewFile             ViewFile

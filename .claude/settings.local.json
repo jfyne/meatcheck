@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo:*)",
+      "Bash(git push:*)",
+      "Bash(meatcheck:*)",
+      "Bash(git add:*)",
+      "Bash(git remote:*)",
+      "Bash(git:*)",
+      "Skill(engineer:engineer-commit)"
+    ]
+  }
+}

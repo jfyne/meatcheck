@@ -13,8 +13,8 @@ func TestBuildViewDiffCommentsNewLinesOnly(t *testing.T) {
 			{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "new"},
 		},
 	}}}
-	comments := []Comment{{Path: "x.go", StartLine: 1, EndLine: 1, Text: "hi"}}
-	view := buildViewDiff(df, comments, 1, 1, false)
+	comments := []Comment{{ID: 1, Path: "x.go", StartLine: 1, EndLine: 1, Text: "hi"}}
+	view := buildViewDiff(df, comments, 1, 1, false, 0)
 	if len(view.Hunks) != 1 {
 		t.Fatalf("expected 1 hunk")
 	}
