@@ -62,16 +62,16 @@ func parseUnifiedDiff(input string) ([]DiffFile, error) {
 			curFile = &DiffFile{}
 			continue
 		}
-		if strings.HasPrefix(raw, "--- ") {
-			path := strings.TrimSpace(strings.TrimPrefix(raw, "--- "))
+		if after, ok := strings.CutPrefix(raw, "--- "); ok {
+			path := strings.TrimSpace(after)
 			if curFile == nil {
 				curFile = &DiffFile{}
 			}
 			curFile.OldPath = normalizeDiffPath(path)
 			continue
 		}
-		if strings.HasPrefix(raw, "+++ ") {
-			path := strings.TrimSpace(strings.TrimPrefix(raw, "+++ "))
+		if after, ok := strings.CutPrefix(raw, "+++ "); ok {
+			path := strings.TrimSpace(after)
 			if curFile == nil {
 				curFile = &DiffFile{}
 			}
