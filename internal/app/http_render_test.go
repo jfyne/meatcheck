@@ -187,6 +187,192 @@ func TestRenderCommentNotEditing(t *testing.T) {
 	}
 }
 
+// buildMinimalModel returns the smallest valid ReviewModel that produces a
+// full HTML render (including inline CSS). It is used by CSS presence tests.
+func buildMinimalModel() *ReviewModel {
+	m := &ReviewModel{
+		Files:                []File{{Path: "a.go", PathSlash: "a.go", Lines: []string{"x"}}},
+		SelectedPath:         "a.go",
+		Mode:                 ModeFile,
+		RenderFile:           true,
+		RenderComments:       true,
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+	m.Tree = buildTree(m.Files, m.SelectedPath)
+	return m
+}
+
+// TestMarkdownImgMaxWidth verifies that the rendered HTML/CSS contains a
+// .markdown img rule with max-width: 100% to constrain images.
+//
+// Scenario: Images constrained to container width
+func TestMarkdownImgMaxWidth(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	if !strings.Contains(html, `.markdown img`) {
+		t.Fatalf("expected .markdown img rule in rendered CSS, got no match")
+	}
+	if !strings.Contains(html, `max-width: 100%`) {
+		t.Fatalf("expected max-width: 100%% in .markdown img rule, got no match")
+	}
+}
+
+// TestMarkdownPreCodeReset verifies that the rendered HTML/CSS contains a
+// .markdown pre code rule that resets the background to transparent.
+//
+// Scenario: Code blocks do not show inline code background
+func TestMarkdownPreCodeReset(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	if !strings.Contains(html, `.markdown pre code`) {
+		t.Fatalf("expected .markdown pre code rule in rendered CSS, got no match")
+	}
+	if !strings.Contains(html, `background: transparent`) {
+		t.Fatalf("expected background: transparent in .markdown pre code rule, got no match")
+	}
+}
+
+// TestMarkdownHrStyles verifies that the rendered HTML/CSS contains a
+// .markdown hr rule with a background-color property.
+//
+// Scenario: Horizontal rules are visible
+func TestMarkdownHrStyles(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	if !strings.Contains(html, `.markdown hr`) {
+		t.Fatalf("expected .markdown hr rule in rendered CSS, got no match")
+	}
+	if !strings.Contains(html, `background-color`) {
+		t.Fatalf("expected background-color property in .markdown hr rule, got no match")
+	}
+}
+
+// TestMarkdownH4H5H6Styles verifies that the rendered HTML/CSS contains
+// individual .markdown h4, .markdown h5, and .markdown h6 rules with their
+// own font-size declarations.
+//
+// Scenario: All heading levels are styled
+func TestMarkdownH4H5H6Styles(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	// The plan specifies: h4 font-size: 1em, h5 font-size: .875em, h6 font-size: .85em.
+	// These specific em-unit values only exist after the new CSS rules are added.
+	if !strings.Contains(html, `.markdown h4`) {
+		t.Fatalf("expected .markdown h4 selector in rendered CSS, got no match")
+	}
+	if !strings.Contains(html, `.markdown h5`) {
+		t.Fatalf("expected .markdown h5 selector in rendered CSS, got no match")
+	}
+	if !strings.Contains(html, `.markdown h6`) {
+		t.Fatalf("expected .markdown h6 selector in rendered CSS, got no match")
+	}
+	// Verify that individual font-size rules exist (not just the shared margin rule).
+	// After implementation, h4 gets font-size: 1em, h5 gets font-size: .875em.
+	if !strings.Contains(html, `font-size: .875em`) {
+		t.Fatalf("expected font-size: .875em for .markdown h5 in rendered CSS, got no match")
+	}
+	if !strings.Contains(html, `font-size: .85em`) {
+		t.Fatalf("expected font-size: .85em for .markdown h6 in rendered CSS, got no match")
+	}
+}
+
+// TestMarkdownHeadingFontWeight verifies that the rendered HTML/CSS contains
+// a shared markdown heading rule that includes font-weight: 600. The check
+// looks for the shared .markdown h1 selector immediately followed (within the
+// same CSS block) by font-weight: 600, which is only present after the new
+// CSS is added. (Other elements have font-weight: 600 but not in a .markdown
+// heading rule.)
+//
+// Scenario: All heading levels are styled (font-weight)
+func TestMarkdownHeadingFontWeight(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	// After implementation the shared heading block contains font-weight: 600.
+	// We check for the combination of the markdown heading selector and the
+	// font-weight: 600 property within the rendered CSS. The specific em-based
+	// heading sizes are the clearest signal that the new heading CSS is present.
+	if !strings.Contains(html, `font-size: 2em`) {
+		t.Fatalf("expected font-size: 2em for .markdown h1 in rendered CSS (signals new heading rules present), got no match")
+	}
+	if !strings.Contains(html, `font-size: 1.5em`) {
+		t.Fatalf("expected font-size: 1.5em for .markdown h2 in rendered CSS, got no match")
+	}
+}
+
+// TestMarkdownH1H2BorderBottom verifies that the rendered HTML/CSS contains
+// a .markdown h1 rule with padding-bottom and border-bottom. The plan specifies
+// ".markdown h1, .markdown h2 { padding-bottom: .3em; border-bottom: 1px solid var(--border) }".
+// Since border-bottom appears in many other non-markdown rules, we check for
+// the specific padding-bottom value (.3em) that is unique to the heading rule.
+//
+// Scenario: All heading levels are styled (h1/h2 border-bottom)
+func TestMarkdownH1H2BorderBottom(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	// padding-bottom: .3em is only used on .markdown h1, .markdown h2 after implementation.
+	if !strings.Contains(html, `padding-bottom: .3em`) {
+		t.Fatalf("expected padding-bottom: .3em on .markdown h1/.markdown h2 in rendered CSS, got no match")
+	}
+}
+
+// TestMarkdownParagraphSpacing verifies that the rendered HTML/CSS uses a
+// 16px bottom margin on .markdown p (not 8px).
+//
+// Scenario: Block-level elements have consistent spacing
+func TestMarkdownParagraphSpacing(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	if !strings.Contains(html, `margin: 0 0 16px 0`) {
+		t.Fatalf("expected margin: 0 0 16px 0 in .markdown p rule, got no match")
+	}
+}
+
+// TestMarkdownLiSpacing verifies that the rendered HTML/CSS contains a
+// .markdown li + li rule to space list items.
+//
+// Scenario: Block-level elements have consistent spacing (list items)
+func TestMarkdownLiSpacing(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	if !strings.Contains(html, `.markdown li + li`) {
+		t.Fatalf("expected .markdown li + li rule in rendered CSS, got no match")
+	}
+}
+
+// TestMarkdownWordWrap verifies that the rendered HTML/CSS contains a
+// word-wrap: break-word declaration on the .markdown container.
+//
+// Scenario: Long words do not overflow container
+func TestMarkdownWordWrap(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	if !strings.Contains(html, `word-wrap: break-word`) {
+		t.Fatalf("expected word-wrap: break-word in .markdown rule, got no match")
+	}
+}
+
+// TestMarkdownCodeFontSize verifies that the rendered HTML/CSS contains a
+// font-size: 85% declaration on .markdown code.
+//
+// Scenario: Code blocks do not show inline code background (font-size)
+func TestMarkdownCodeFontSize(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	if !strings.Contains(html, `font-size: 85%`) {
+		t.Fatalf("expected font-size: 85%% in .markdown code rule, got no match")
+	}
+}
+
+// TestMarkdownLinkTextDecoration verifies that the rendered HTML/CSS contains
+// a .markdown a rule with text-decoration: none. Since text-decoration: none
+// appears in chroma CSS rules (e.g. .lnlinks), we check for the specific
+// .markdown a hover rule (text-decoration: underline) which is unique to the
+// new markdown link styles.
+//
+// Scenario: Links use accent color without underline by default
+func TestMarkdownLinkTextDecoration(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	// After implementation, .markdown a:hover { text-decoration: underline } is added.
+	// This specific selector+property combination does not exist before implementation.
+	if !strings.Contains(html, `.markdown a:hover`) {
+		t.Fatalf("expected .markdown a:hover rule in rendered CSS, got no match")
+	}
+	if !strings.Contains(html, `text-decoration: underline`) {
+		t.Fatalf("expected text-decoration: underline in .markdown a:hover rule, got no match")
+	}
+}
+
 func renderReviewHTML(t *testing.T, model *ReviewModel) string {
 	t.Helper()
 
