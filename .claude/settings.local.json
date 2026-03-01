@@ -7,7 +7,9 @@
       "Bash(git add:*)",
       "Bash(git remote:*)",
       "Bash(git:*)",
-      "Skill(engineer:engineer-commit)"
+      "Skill(engineer:engineer-commit)",
+      "WebFetch(domain:unpkg.com)",
+      "WebFetch(domain:primer.style)"
     ]
   }
 }

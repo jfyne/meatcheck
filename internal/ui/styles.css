@@ -416,10 +416,11 @@ textarea {
 
 .markdown {
   line-height: 1.5;
+  word-wrap: break-word;
 }
 
 .markdown p {
-  margin: 0 0 8px 0;
+  margin: 0 0 16px 0;
 }
 
 .markdown p:last-child {
@@ -432,30 +433,46 @@ textarea {
 .markdown h4,
 .markdown h5,
 .markdown h6 {
-  margin: 1.3em 0 0.5em 0;
+  margin: 1.5em 0 1em 0;
   line-height: 1.25;
+  font-weight: 600;
+}
+
+.markdown h1,
+.markdown h2 {
+  padding-bottom: .3em;
+  border-bottom: 1px solid var(--border);
 }
 
 .markdown h1 {
-  font-size: 32px;
+  font-size: 2em;
 }
 
 .markdown h2 {
-  font-size: 24px;
+  font-size: 1.5em;
 }
 
 .markdown h3 {
-  font-size: 20px;
+  font-size: 1.25em;
 }
+
+.markdown h4 { font-size: 1em; }
+
+.markdown h5 { font-size: .875em; }
+
+.markdown h6 { font-size: .85em; color: var(--muted); }
 
 .markdown ul,
 .markdown ol {
-  margin: 0 0 10px 22px;
+  margin: 0 0 16px 0;
+  padding-left: 2em;
 }
 
+.markdown li + li { margin-top: .25em; }
+
 .markdown blockquote {
-  margin: 0 0 10px 0;
-  padding-left: 12px;
+  margin: 0 0 16px 0;
+  padding: 0 1em;
   border-left: 3px solid var(--accent-soft);
   color: var(--muted);
 }
@@ -465,17 +482,27 @@ textarea {
   background: rgba(45, 108, 223, 0.12);
   padding: 0 4px;
   border-radius: 0;
+  font-size: 85%;
+  white-space: break-spaces;
 }
 
 .markdown pre {
   background: #0f131a;
-  padding: 10px 12px;
+  padding: 16px;
   border-radius: 0;
   overflow: auto;
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
   letter-spacing: 0;
   word-spacing: 0;
   font-variant-ligatures: none;
+  font-size: 85%;
+  line-height: 1.45;
+}
+
+.markdown pre code {
+  background: transparent;
+  padding: 0;
+  border: 0;
 }
 
 .chroma {
@@ -496,13 +523,16 @@ textarea {
   -moz-tab-size: 4;
 }
 
-.markdown a {
-  color: var(--accent);
-}
+.markdown a { color: var(--accent); text-decoration: none; }
+
+.markdown a:hover { text-decoration: underline; }
 
 .markdown table {
   border-collapse: collapse;
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
+  display: block;
+  max-width: 100%;
+  overflow: auto;
 }
 
 .markdown th,
@@ -510,6 +540,36 @@ textarea {
   border: 1px solid var(--border);
   padding: 6px 10px;
   text-align: left;
+}
+
+.markdown th { font-weight: 600; }
+
+.markdown tr:nth-child(2n) { background: rgba(255, 255, 255, 0.03); }
+
+.markdown img { max-width: 100%; height: auto; display: block; }
+
+.markdown hr { height: .25em; padding: 0; margin: 24px 0; background-color: var(--border); border: 0; }
+
+.markdown .frontmatter {
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.markdown .frontmatter td {
+  padding: 4px 10px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown .frontmatter tr:last-child td { border-bottom: none; }
+
+.markdown .frontmatter-key {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
 }
 
 .inline-comment {

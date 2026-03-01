@@ -60,7 +60,7 @@ All four task groups below are executed as a single implementation worker (T-imp
 
 ### Typography
 
-- [ ] Update heading styles, add h4–h6, update link decoration (`internal/ui/styles.css`) [Stage 1, T-impl-1]
+- [x] Update heading styles, add h4–h6, update link decoration (`internal/ui/styles.css`) [Stage 1, T-impl-1]
   - Files: `internal/ui/styles.css` (modifies)
   - Update shared heading rule: `margin: 1.5em 0 1em 0` (was `1.3em 0 0.5em 0`) and add `font-weight: 600`
   - Add `h1`/`h2` bottom border: `padding-bottom: .3em; border-bottom: 1px solid var(--border)`
@@ -72,7 +72,7 @@ All four task groups below are executed as a single implementation worker (T-imp
 
 ### Spacing and Overflow
 
-- [ ] Update block-level spacing to consistent 16px bottom margins (`internal/ui/styles.css`) [Stage 1, T-impl-1]
+- [x] Update block-level spacing to consistent 16px bottom margins (`internal/ui/styles.css`) [Stage 1, T-impl-1]
   - Files: `internal/ui/styles.css` (modifies)
   - Change `.markdown p` margin from `0 0 8px 0` to `0 0 16px 0`
   - Preserve existing `.markdown p:last-child { margin-bottom: 0 }` rule (prevents trailing space in containers)
@@ -85,7 +85,7 @@ All four task groups below are executed as a single implementation worker (T-imp
 
 ### Image and Table Overflow
 
-- [ ] Add image constraints and table overflow handling (`internal/ui/styles.css`) [Stage 1, T-impl-1]
+- [x] Add image constraints and table overflow handling (`internal/ui/styles.css`) [Stage 1, T-impl-1]
   - Files: `internal/ui/styles.css` (modifies)
   - Add `.markdown img { max-width: 100%; height: auto; display: block }`
   - Add `.markdown table { display: block; max-width: 100%; overflow: auto }`
@@ -94,7 +94,7 @@ All four task groups below are executed as a single implementation worker (T-imp
 
 ### Code Blocks and HR
 
-- [ ] Fix pre>code reset, add HR styles (`internal/ui/styles.css`) [Stage 1, T-impl-1]
+- [x] Fix pre>code reset, add HR styles (`internal/ui/styles.css`) [Stage 1, T-impl-1]
   - Files: `internal/ui/styles.css` (modifies)
   - Add `pre > code` reset: `.markdown pre code { background: transparent; padding: 0; border: 0 }`
   - Add `.markdown pre { font-size: 85%; line-height: 1.45 }`
@@ -103,7 +103,7 @@ All four task groups below are executed as a single implementation worker (T-imp
 
 ### Frontmatter Rendering
 
-- [ ] Render YAML frontmatter as a styled metadata table (`internal/app/assets.go`, `internal/ui/styles.css`) [Stage 1, T-impl-2]
+- [x] Render YAML frontmatter as a styled metadata table (`internal/app/assets.go`, `internal/ui/styles.css`) [Stage 1, T-impl-2]
   - Files: `internal/app/assets.go` (modifies), `internal/ui/styles.css` (modifies)
   - Add a `renderFrontmatter(input string) (html string, rest string)` function that detects YAML frontmatter and converts it to an HTML metadata table
   - Frontmatter is defined as: content starts with `---\n`, followed by any content, closed by `\n---\n` (or `\n---` at EOF)
