@@ -348,6 +348,12 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		return model, nil
 	})
 
+	h.HandleEvent("toggle-sidebar", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		model.SidebarCollapsed = !model.SidebarCollapsed
+		return model, nil
+	})
+
 	h.HandleEvent("finish", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
 		model := getModel(s, rs.Model)
 		if s != nil {
