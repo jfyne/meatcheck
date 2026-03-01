@@ -106,8 +106,8 @@ func buildCommentModel() *ReviewModel {
 }
 
 // TestRenderCommentEditDeleteButtons verifies that each rendered comment
-// displays an edit button (live-click="start-edit-comment") and a delete
-// button (live-click="delete-comment"), both carrying the comment's ID.
+// displays an edit button (data-action="start-edit-comment") and a delete
+// button (data-action="delete-comment"), both carrying the comment's ID.
 //
 // Scenario: Edit and delete buttons visible on comments
 func TestRenderCommentEditDeleteButtons(t *testing.T) {
@@ -116,14 +116,14 @@ func TestRenderCommentEditDeleteButtons(t *testing.T) {
 
 	html := renderReviewHTML(t, model)
 
-	if !strings.Contains(html, `live-click="start-edit-comment"`) {
+	if !strings.Contains(html, `data-action="start-edit-comment"`) {
 		t.Errorf("expected start-edit-comment button in rendered HTML, got: %q", html)
 	}
-	if !strings.Contains(html, `live-click="delete-comment"`) {
+	if !strings.Contains(html, `data-action="delete-comment"`) {
 		t.Errorf("expected delete-comment button in rendered HTML, got: %q", html)
 	}
-	if !strings.Contains(html, `live-value-id="1"`) {
-		t.Errorf("expected live-value-id=\"1\" on comment action buttons, got: %q", html)
+	if !strings.Contains(html, `data-comment-id="1"`) {
+		t.Errorf("expected data-comment-id=\"1\" on comment action buttons, got: %q", html)
 	}
 }
 
@@ -156,10 +156,10 @@ func TestRenderCommentEditForm(t *testing.T) {
 		t.Errorf("expected value=\"1\" on hidden id input, got: %q", html)
 	}
 	// Edit and delete action buttons should be hidden while editing.
-	if strings.Contains(html, `live-click="start-edit-comment"`) {
+	if strings.Contains(html, `data-action="start-edit-comment"`) {
 		t.Errorf("start-edit-comment button should be hidden when comment is being edited, got: %q", html)
 	}
-	if strings.Contains(html, `live-click="delete-comment"`) {
+	if strings.Contains(html, `data-action="delete-comment"`) {
 		t.Errorf("delete-comment button should be hidden when comment is being edited, got: %q", html)
 	}
 }
@@ -176,10 +176,10 @@ func TestRenderCommentNotEditing(t *testing.T) {
 
 	html := renderReviewHTML(t, model)
 
-	if !strings.Contains(html, `live-click="start-edit-comment"`) {
+	if !strings.Contains(html, `data-action="start-edit-comment"`) {
 		t.Errorf("expected start-edit-comment button when not editing, got: %q", html)
 	}
-	if !strings.Contains(html, `live-click="delete-comment"`) {
+	if !strings.Contains(html, `data-action="delete-comment"`) {
 		t.Errorf("expected delete-comment button when not editing, got: %q", html)
 	}
 	if strings.Contains(html, `live-submit="edit-comment"`) {

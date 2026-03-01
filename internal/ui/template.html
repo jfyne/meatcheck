@@ -7,8 +7,8 @@
           <span>{{.Path}}:{{.StartLine}}-{{.EndLine}}</span>
           {{if not .Editing}}
             <span class="line-comment-actions">
-              <button class="comment-action-btn" live-click="start-edit-comment" live-value-id="{{.ID}}" title="Edit comment" aria-label="Edit comment">&#9998;</button>
-              <button class="comment-action-btn delete" live-click="delete-comment" live-value-id="{{.ID}}" title="Delete comment" aria-label="Delete comment">&times;</button>
+              <button class="comment-action-btn" data-action="start-edit-comment" data-comment-id="{{.ID}}" type="button" title="Edit comment" aria-label="Edit comment">&#9998;</button>
+              <button class="comment-action-btn delete" data-action="delete-comment" data-comment-id="{{.ID}}" type="button" title="Delete comment" aria-label="Delete comment">&times;</button>
             </span>
           {{end}}
         </div>
@@ -215,6 +215,17 @@
           const textarea = form.querySelector('textarea[name="comment"]');
           if (textarea) {
             textarea.value = "";
+          }
+        });
+        root.addEventListener("click", (ev) => {
+          const target = ev.target;
+          if (!target || !(target instanceof Element)) return;
+          const btn = target.closest("[data-action][data-comment-id]");
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const id = btn.dataset.commentId;
+          if (action && id && window.Live && typeof window.Live.send === "function") {
+            window.Live.send(action, { id: id });
           }
         });
         root.addEventListener("keydown", (ev) => {
