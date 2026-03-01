@@ -93,6 +93,7 @@ type ReviewModel struct {
 	Mode                 ViewMode
 	RenderFile           bool
 	RenderComments       bool
+	SidebarCollapsed     bool
 	Prompt               string
 	PromptHTML           template.HTML
 	SelectionStart       int

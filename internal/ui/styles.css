@@ -35,7 +35,7 @@ body {
 
 .workspace {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: var(--sidebar-width, 280px) 1fr;
   min-height: 0;
 }
 
@@ -46,6 +46,7 @@ body {
   overflow: auto;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .brand {
@@ -545,6 +546,67 @@ textarea {
   font-size: 12px;
 }
 
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.sidebar-toggle-btn:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.sidebar-resize-handle:hover {
+  background: var(--accent);
+  opacity: 0.4;
+}
+
+.sidebar-collapsed {
+  grid-template-columns: 40px 1fr;
+}
+
+.sidebar-collapsed .sidebar {
+  padding: 12px 6px;
+  overflow: hidden;
+}
+
+.sidebar-collapsed .tree-item,
+.sidebar-collapsed .sidebar-brand {
+  display: none;
+}
+
+.sidebar-collapsed .sidebar-toggle-btn {
+  align-self: center;
+  margin-bottom: 0;
+}
+
+.sidebar-collapsed .sidebar-resize-handle {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .app {
     grid-template-rows: auto 1fr;
@@ -555,10 +617,24 @@ textarea {
     grid-template-rows: auto 1fr;
   }
 
+  .workspace.sidebar-collapsed {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
   .sidebar {
     border-right: none;
     border-bottom: 1px solid var(--border);
     max-height: 220px;
+  }
+
+  .sidebar-collapsed .sidebar {
+    max-height: none;
+    padding: 6px;
+  }
+
+  .sidebar-resize-handle {
+    display: none;
   }
 }
 

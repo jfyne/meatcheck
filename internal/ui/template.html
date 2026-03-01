@@ -80,8 +80,11 @@
         </div>
     </header>
 
-    <div class="workspace">
+    <div class="workspace{{if .SidebarCollapsed}} sidebar-collapsed{{end}}">
       <aside class="sidebar">
+        <button class="sidebar-toggle-btn" live-click="toggle-sidebar" title="{{if .SidebarCollapsed}}Expand sidebar{{else}}Collapse sidebar{{end}}" aria-label="{{if .SidebarCollapsed}}Expand sidebar{{else}}Collapse sidebar{{end}}">
+          {{if .SidebarCollapsed}}&#9654;{{else}}&#9664;{{end}}
+        </button>
         {{range .Tree}}
           {{if .IsDir}}
             <div class="tree-item dir" style="margin-left: {{mul .Depth 12}}px;">{{.Name}}</div>
@@ -95,6 +98,7 @@
           <img src="{{$.Logo}}" alt="Meatcheck logo" class="logo" />
           <span>Meatcheck</span>
         </div>
+        <div class="sidebar-resize-handle" aria-hidden="true"></div>
       </aside>
 
       <section class="main">
@@ -184,6 +188,50 @@
     window.Hooks["line-selector"] = {
       mounted: function () {
         const root = this.el;
+
+        // Restore sidebar width from localStorage
+        (function () {
+          var saved = null;
+          try { saved = localStorage.getItem("meatcheck-sidebar-width"); } catch (e) {}
+          if (saved) {
+            document.documentElement.style.setProperty("--sidebar-width", saved);
+          }
+        })();
+
+        // Drag-to-resize sidebar
+        (function () {
+          var handle = root.querySelector(".sidebar-resize-handle");
+          if (!handle) return;
+          var dragging = false;
+          var startX = 0;
+          var startWidth = 0;
+          handle.addEventListener("mousedown", function (ev) {
+            var workspace = root.querySelector(".workspace");
+            if (!workspace || workspace.classList.contains("sidebar-collapsed")) return;
+            ev.preventDefault();
+            dragging = true;
+            startX = ev.clientX;
+            var sidebar = root.querySelector(".sidebar");
+            startWidth = sidebar ? sidebar.getBoundingClientRect().width : 280;
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+          });
+          document.addEventListener("mousemove", function (ev) {
+            if (!dragging) return;
+            var delta = ev.clientX - startX;
+            var newWidth = Math.max(140, Math.min(600, startWidth + delta));
+            var val = newWidth + "px";
+            document.documentElement.style.setProperty("--sidebar-width", val);
+            try { localStorage.setItem("meatcheck-sidebar-width", val); } catch (e) {}
+          });
+          document.addEventListener("mouseup", function () {
+            if (!dragging) return;
+            dragging = false;
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+          });
+        })();
+
         this.handleEvent("close-tab", () => {
           try {
             window.open("", "_self");
