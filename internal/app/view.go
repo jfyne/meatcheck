@@ -34,7 +34,16 @@ func updateFileView(model *ReviewModel) {
 			viewFile.MarkdownRendered = rendered
 		}
 		if viewFile.MarkdownFile && viewFile.MarkdownRendered {
-			viewFile.MarkdownHTML = renderMarkdownDocument(selectedFile.Path, strings.Join(selectedFile.Lines, "\n"))
+			blocks := renderMarkdownBlocks(selectedFile.Path, strings.Join(selectedFile.Lines, "\n"))
+			for i := range blocks {
+				blocks[i].Selected = model.SelectionStart > 0 && model.SelectionEnd > 0 &&
+					blocks[i].EndLine >= model.SelectionStart && blocks[i].StartLine <= model.SelectionEnd
+				blocks[i].Commented, blocks[i].Comments = projectBlockComments(
+					selectedFile.Path, blocks[i].StartLine, blocks[i].EndLine,
+					model.Comments, model.EditingCommentID,
+				)
+			}
+			viewFile.MarkdownBlocks = blocks
 			model.ViewFile = viewFile
 			model.SelectedLabel = formatSelectedLabel(model.SelectedPath, model.Ranges[model.SelectedPath])
 			return
@@ -166,6 +175,27 @@ func projectLineComments(path string, lineNum int, comments []Comment, editingID
 		}
 	}
 	return commented, lineComments
+}
+
+func projectBlockComments(path string, startLine, endLine int, comments []Comment, editingID int) (bool, []ViewComment) {
+	commented := false
+	blockComments := make([]ViewComment, 0)
+	for _, c := range comments {
+		if c.Path != path {
+			continue
+		}
+		if c.StartLine <= endLine && c.EndLine >= startLine {
+			commented = true
+		}
+		if c.StartLine >= startLine && c.StartLine <= endLine {
+			blockComments = append(blockComments, ViewComment{
+				Comment:  c,
+				Rendered: renderMarkdown(c.Text),
+				Editing:  c.ID == editingID,
+			})
+		}
+	}
+	return commented, blockComments
 }
 
 func diffFilesAsFiles(diffFiles []DiffFile) []File {

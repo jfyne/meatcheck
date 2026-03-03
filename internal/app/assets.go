@@ -6,13 +6,16 @@ import (
 	"html/template"
 	"net/url"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/jfyne/meatcheck/internal/highlight"
 	"github.com/jfyne/meatcheck/internal/ui"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
 	xhtml "golang.org/x/net/html"
 )
 
@@ -106,6 +109,137 @@ func renderMarkdownDocument(path string, input string) template.HTML {
 	}
 	rendered := renderMarkdown(input)
 	return rewriteMarkdownImageSources(string(rendered), baseDir)
+}
+
+// renderMarkdownBlocks parses markdown into per-block HTML chunks with source line mappings.
+func renderMarkdownBlocks(path, input string) []MarkdownBlock {
+	baseDir := filepath.Dir(path)
+	if baseDir == "." {
+		baseDir = ""
+	}
+
+	fmHTML, rest := renderFrontmatter(input)
+	fmLineCount := 0
+	if fmHTML != "" {
+		prefix := input[:len(input)-len(rest)]
+		fmLineCount = strings.Count(prefix, "\n")
+		if len(prefix) > 0 && !strings.HasSuffix(prefix, "\n") {
+			fmLineCount++
+		}
+	}
+
+	source := []byte(rest)
+
+	// Build byte-offset to line-number lookup (sorted line start offsets).
+	lineStarts := []int{0}
+	for i, b := range source {
+		if b == '\n' {
+			lineStarts = append(lineStarts, i+1)
+		}
+	}
+	byteToLine := func(offset int) int {
+		idx := sort.SearchInts(lineStarts, offset+1) - 1
+		if idx < 0 {
+			idx = 0
+		}
+		return idx + 1 + fmLineCount // 1-based, offset by frontmatter
+	}
+
+	// Parse AST.
+	reader := text.NewReader(source)
+	doc := markdownRenderer.Parser().Parse(reader)
+	r := markdownRenderer.Renderer()
+
+	var blocks []MarkdownBlock
+
+	// Add frontmatter block if present.
+	if fmHTML != "" {
+		blocks = append(blocks, MarkdownBlock{
+			StartLine: 1,
+			EndLine:   fmLineCount,
+			HTML:      template.HTML(fmHTML),
+		})
+	}
+
+	// Render each top-level block.
+	lastLine := fmLineCount
+	for child := doc.FirstChild(); child != nil; child = child.NextSibling() {
+		startByte, endByte := nodeByteRange(child)
+
+		startLine := 0
+		endLine := 0
+		if startByte >= 0 {
+			startLine = byteToLine(startByte)
+		} else {
+			startLine = lastLine + 1
+		}
+		if endByte > 0 {
+			endLine = byteToLine(endByte - 1)
+		}
+		if endLine < startLine {
+			endLine = startLine
+		}
+		lastLine = endLine
+
+		var buf bytes.Buffer
+		if err := r.Render(&buf, source, child); err != nil {
+			continue
+		}
+		blockHTML := rewriteMarkdownImageSources(buf.String(), baseDir)
+
+		blocks = append(blocks, MarkdownBlock{
+			StartLine: startLine,
+			EndLine:   endLine,
+			HTML:      blockHTML,
+		})
+	}
+
+	return blocks
+}
+
+// nodeByteRange returns the [start, end) byte range of an AST node's source text,
+// searching the node's own lines and recursing into children.
+func nodeByteRange(node ast.Node) (start, end int) {
+	start, end = -1, -1
+
+	// Lines() is only valid for block nodes; calling it on inline nodes panics.
+	if node.Type() == ast.TypeBlock {
+		if segs := node.Lines(); segs != nil && segs.Len() > 0 {
+			s := segs.At(0).Start
+			e := segs.At(segs.Len() - 1).Stop
+			if start < 0 || s < start {
+				start = s
+			}
+			if end < 0 || e > end {
+				end = e
+			}
+		}
+	}
+
+	if t, ok := node.(*ast.Text); ok {
+		s := t.Segment.Start
+		e := t.Segment.Stop
+		if s != e {
+			if start < 0 || s < start {
+				start = s
+			}
+			if end < 0 || e > end {
+				end = e
+			}
+		}
+	}
+
+	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
+		cs, ce := nodeByteRange(child)
+		if cs >= 0 && (start < 0 || cs < start) {
+			start = cs
+		}
+		if ce >= 0 && (end < 0 || ce > end) {
+			end = ce
+		}
+	}
+
+	return start, end
 }
 
 func rewriteMarkdownImageSources(doc string, baseDir string) template.HTML {
