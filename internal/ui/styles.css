@@ -234,18 +234,41 @@ body {
 .markdown-file-preview {
   background: var(--panel);
   border: 1px solid var(--border);
-  padding: 24px 32px;
+  padding: 8px 0;
   overflow: auto;
 }
 
-.markdown-file-body {
+.md-block {
   max-width: 980px;
+  padding: 4px 32px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 100ms ease;
 }
 
-.markdown-file-hint {
-  margin-top: 20px;
-  font-size: 12px;
-  color: var(--muted);
+.md-block:hover {
+  background: var(--line-hover);
+}
+
+.md-block.selected {
+  background: var(--line-selected);
+}
+
+.md-block.commented {
+  border-left-color: var(--accent);
+}
+
+.md-block .line-comment-thread {
+  padding-left: 0;
+  padding-right: 0;
+  position: static;
+}
+
+.md-block .inline-comment {
+  padding: 12px 0 4px 0;
+  position: static;
+  background: transparent;
+  border-top: 1px dashed var(--border);
 }
 
 .code {

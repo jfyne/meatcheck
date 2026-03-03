@@ -36,12 +36,21 @@ type ViewLine struct {
 	Comments  []ViewComment
 }
 
+type MarkdownBlock struct {
+	StartLine int
+	EndLine   int
+	HTML      template.HTML
+	Selected  bool
+	Commented bool
+	Comments  []ViewComment
+}
+
 type ViewFile struct {
 	Path             string
 	Lines            []ViewLine
 	MarkdownFile     bool
 	MarkdownRendered bool
-	MarkdownHTML     template.HTML
+	MarkdownBlocks   []MarkdownBlock
 }
 
 type ViewMode string

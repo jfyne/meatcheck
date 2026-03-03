@@ -143,8 +143,29 @@
 {{else}}
   {{if and .ViewFile.MarkdownFile .ViewFile.MarkdownRendered}}
   <div class="markdown-file-preview markdown" id="code-view-{{.CodeViewKey}}">
-    <div class="markdown-file-body">{{.ViewFile.MarkdownHTML}}</div>
-    <div class="markdown-file-hint">Switch to code view to add line comments.</div>
+    {{range .ViewFile.MarkdownBlocks}}
+      <div class="md-block{{if .Selected}} selected{{end}}{{if .Commented}} commented{{end}}" id="line-{{id $root.SelectedPath}}-{{.StartLine}}">
+        <div class="md-block-content" data-line="{{.StartLine}}" data-line-end="{{.EndLine}}">{{.HTML}}</div>
+        {{if .Comments}}
+          <div class="line-comment-thread">
+            {{template "commentThread" (commentThreadData $root .Comments $.Logo)}}
+          </div>
+        {{end}}
+        {{if and (gt $root.SelectionEnd 0) (le .StartLine $root.SelectionEnd) (ge .EndLine $root.SelectionEnd)}}
+          <div class="inline-comment">
+            <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
+              <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
+              <textarea name="comment" placeholder="Leave a comment..." autofocus></textarea>
+              {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
+              <div class="comment-actions">
+                <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
+                <button class="btn" type="submit">Add Comment</button>
+              </div>
+            </form>
+          </div>
+        {{end}}
+      </div>
+    {{end}}
   </div>
   {{else}}
   <div class="code {{if $root.RenderFile}}chroma{{end}}" id="code-view-{{.CodeViewKey}}">
@@ -249,9 +270,10 @@
           if (!clickable) return;
           const line = Number(clickable.dataset.line || 0);
           if (!line) return;
+          const lineEnd = Number(clickable.dataset.lineEnd || 0);
           const shift = ev.shiftKey ? "1" : "";
           if (window.Live && typeof window.Live.send === "function") {
-            window.Live.send("select-line", { line: line, shift: shift });
+            window.Live.send("select-line", { line: line, line_end: lineEnd || line, shift: shift });
           }
         });
         root.addEventListener("click", (ev) => {

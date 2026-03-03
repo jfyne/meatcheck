@@ -247,9 +247,13 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 	h.HandleEvent("select-line", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
 		model := getModel(s, rs.Model)
 		line := p.Int("line")
+		lineEnd := p.Int("line_end")
 		shift := p.String("shift") == "1"
 		if line <= 0 {
 			return model, nil
+		}
+		if lineEnd < line {
+			lineEnd = line
 		}
 		if model.Mode == ModeDiff {
 			if !diffLineExists(model.DiffFiles, model.SelectedPath, line) {
@@ -258,7 +262,7 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		}
 		if shift && model.SelectionStart > 0 {
 			start := model.SelectionStart
-			end := line
+			end := lineEnd
 			if end < start {
 				start, end = end, start
 			}
@@ -266,7 +270,7 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 			model.SelectionEnd = end
 		} else {
 			model.SelectionStart = line
-			model.SelectionEnd = line
+			model.SelectionEnd = lineEnd
 		}
 		model.Error = ""
 		updateView(model)
