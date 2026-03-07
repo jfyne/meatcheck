@@ -16,10 +16,11 @@ func TestHTTPRenderIncludesThemeClass(t *testing.T) {
 		Mode:                 ModeFile,
 		RenderFile:           true,
 		RenderComments:       true,
+		Viewed:               make(map[string]bool),
 		Ranges:               map[string][]LineRange{},
 		MarkdownRenderByPath: map[string]bool{},
 	}
-	model.Tree = buildTree(model.Files, model.SelectedPath)
+	model.Tree = buildTree(model.Files, model.SelectedPath, nil, nil)
 
 	html := renderReviewHTML(t, model)
 	if !strings.Contains(html, `<body class="theme-dark">`) {
@@ -40,10 +41,11 @@ func TestHTTPRenderFileModeCommentFormAutofocus(t *testing.T) {
 		Mode:                 ModeFile,
 		RenderFile:           true,
 		RenderComments:       true,
+		Viewed:               make(map[string]bool),
 		Ranges:               map[string][]LineRange{},
 		MarkdownRenderByPath: map[string]bool{},
 	}
-	model.Tree = buildTree(model.Files, model.SelectedPath)
+	model.Tree = buildTree(model.Files, model.SelectedPath, nil, nil)
 
 	html := renderReviewHTML(t, model)
 	if !strings.Contains(html, `<textarea name="comment" placeholder="Leave a comment..." autofocus></textarea>`) {
@@ -71,10 +73,11 @@ func TestHTTPRenderDiffModeCommentFormAutofocus(t *testing.T) {
 		Mode:                 ModeDiff,
 		RenderFile:           true,
 		RenderComments:       true,
+		Viewed:               make(map[string]bool),
 		Ranges:               map[string][]LineRange{},
 		MarkdownRenderByPath: map[string]bool{},
 	}
-	model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath)
+	model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath, nil, nil)
 
 	html := renderReviewHTML(t, model)
 	if !strings.Contains(html, `<textarea name="comment" placeholder="Leave a comment..." autofocus></textarea>`) {
@@ -96,6 +99,7 @@ func buildCommentModel() *ReviewModel {
 		Mode:           ModeFile,
 		RenderFile:     true,
 		RenderComments: true,
+		Viewed:         make(map[string]bool),
 		NextCommentID:  1,
 		Comments: []Comment{
 			{ID: 1, Path: "test.go", StartLine: 1, EndLine: 1, Text: "hello"},
@@ -112,7 +116,7 @@ func buildCommentModel() *ReviewModel {
 // Scenario: Edit and delete buttons visible on comments
 func TestRenderCommentEditDeleteButtons(t *testing.T) {
 	model := buildCommentModel()
-	model.Tree = buildTree(model.Files, model.SelectedPath)
+	model.Tree = buildTree(model.Files, model.SelectedPath, nil, nil)
 
 	html := renderReviewHTML(t, model)
 
@@ -136,7 +140,7 @@ func TestRenderCommentEditDeleteButtons(t *testing.T) {
 func TestRenderCommentEditForm(t *testing.T) {
 	model := buildCommentModel()
 	model.EditingCommentID = 1
-	model.Tree = buildTree(model.Files, model.SelectedPath)
+	model.Tree = buildTree(model.Files, model.SelectedPath, nil, nil)
 
 	html := renderReviewHTML(t, model)
 
@@ -172,7 +176,7 @@ func TestRenderCommentEditForm(t *testing.T) {
 func TestRenderCommentNotEditing(t *testing.T) {
 	model := buildCommentModel()
 	model.EditingCommentID = 0
-	model.Tree = buildTree(model.Files, model.SelectedPath)
+	model.Tree = buildTree(model.Files, model.SelectedPath, nil, nil)
 
 	html := renderReviewHTML(t, model)
 
@@ -196,10 +200,11 @@ func buildMinimalModel() *ReviewModel {
 		Mode:                 ModeFile,
 		RenderFile:           true,
 		RenderComments:       true,
+		Viewed:               make(map[string]bool),
 		Ranges:               map[string][]LineRange{},
 		MarkdownRenderByPath: map[string]bool{},
 	}
-	m.Tree = buildTree(m.Files, m.SelectedPath)
+	m.Tree = buildTree(m.Files, m.SelectedPath, nil, nil)
 	return m
 }
 

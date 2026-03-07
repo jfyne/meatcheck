@@ -83,6 +83,10 @@ body {
   font-size: 11px;
 }
 
+.tree-item.file {
+  justify-content: space-between;
+}
+
 .tree-item.file:hover {
   background: var(--line-hover);
 }
@@ -91,6 +95,48 @@ body {
   background: var(--accent-soft);
   color: var(--accent);
   font-weight: 600;
+}
+
+.tree-item.group {
+  cursor: default;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  margin-top: 12px;
+  padding-bottom: 8px;
+}
+
+.tree-item.group:first-child {
+  margin-top: 0;
+}
+
+.tree-item.group.active-group {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tree-indicators {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.viewed-check {
+  color: #2ea043;
+}
+
+.comment-dot {
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.tree-item.viewed .tree-name {
+  color: var(--muted);
 }
 
 .sidebar-brand {
@@ -107,7 +153,7 @@ body {
 
 .main {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   min-height: 0;
 }
 
@@ -345,6 +391,14 @@ body {
 
 .footer {
   padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.content-footer {
+  display: flex;
+  align-items: center;
+  padding: 10px 24px;
   border-top: 1px solid var(--border);
   background: var(--panel);
 }

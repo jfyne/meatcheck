@@ -2,6 +2,7 @@ package app
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -95,4 +96,27 @@ func emitToon(w io.Writer, comments []Comment) error {
 	}
 	_, err = fmt.Fprintln(w, encoded)
 	return err
+}
+
+func ParseGroupsFile(path string) ([]Group, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read groups file: %w", err)
+	}
+	var groups []Group
+	if err := json.Unmarshal(data, &groups); err != nil {
+		return nil, fmt.Errorf("parse groups file: %w", err)
+	}
+	for i, g := range groups {
+		if strings.TrimSpace(g.Name) == "" {
+			return nil, fmt.Errorf("group at index %d has empty name", i)
+		}
+		if len(g.Files) == 0 {
+			return nil, fmt.Errorf("group %q has no files", g.Name)
+		}
+		for j, f := range g.Files {
+			groups[i].Files[j] = filepath.ToSlash(filepath.Clean(f))
+		}
+	}
+	return groups, nil
 }

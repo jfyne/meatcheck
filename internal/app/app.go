@@ -27,6 +27,7 @@ Usage:
   meatcheck [--host 127.0.0.1] [--port 0] <file1> <file2> ...
   meatcheck --diff <diff-file>
   meatcheck --diff <diff-file> --prompt "Review the changes"
+  meatcheck --groups groups.json <file1> <file2> ...
 
 Flags:
   --host   host to bind (default 127.0.0.1)
@@ -34,6 +35,7 @@ Flags:
   --prompt review prompt/question to display at top
   --diff   path to unified diff file (or pipe via stdin)
   --range  file section to render (path:start-end), repeatable
+  --groups path to JSON file with ordered file groups
   --help   show this help and exit
   --skill  print agent skill markdown and exit
 `)
@@ -76,6 +78,9 @@ func Run(ctx context.Context, cfg Config) error {
 	model := &ReviewModel{
 		Files:                files,
 		DiffFiles:            diffFiles,
+		Viewed:               make(map[string]bool),
+		Groups:               cfg.Groups,
+		HasGroups:            len(cfg.Groups) > 0,
 		SelectedPath:         "",
 		SelectedLabel:        "",
 		Mode:                 mode,
@@ -91,11 +96,10 @@ func Run(ctx context.Context, cfg Config) error {
 	model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
 	if mode == ModeDiff {
 		model.SelectedPath = diffFiles[0].Path
-		model.Tree = buildTree(diffFilesAsFiles(diffFiles), model.SelectedPath)
 	} else {
 		model.SelectedPath = files[0].Path
-		model.Tree = buildTree(files, model.SelectedPath)
 	}
+	rebuildTree(model)
 	updateView(model)
 
 	meatcheckServer := &ReviewServer{
@@ -141,6 +145,30 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 	return nil
+}
+
+func rebuildTree(model *ReviewModel) {
+	var files []File
+	if model.Mode == ModeDiff {
+		files = diffFilesAsFiles(model.DiffFiles)
+	} else {
+		files = model.Files
+	}
+	if model.HasGroups {
+		model.Tree = buildGroupedTree(model.Groups, files, model.SelectedPath, model.Viewed, model.Comments)
+	} else {
+		model.Tree = buildTree(files, model.SelectedPath, model.Viewed, model.Comments)
+	}
+}
+
+func selectFile(model *ReviewModel, path string) {
+	model.SelectedPath = path
+	model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
+	model.SelectionStart = 0
+	model.SelectionEnd = 0
+	model.Error = ""
+	rebuildTree(model)
+	updateView(model)
 }
 
 func buildLiveHandler(rs *ReviewServer) *live.Handler {
@@ -200,23 +228,11 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		switch model.Mode {
 		case ModeDiff:
 			if hasDiffFile(model.DiffFiles, path) {
-				model.SelectedPath = path
-				model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
-				model.SelectionStart = 0
-				model.SelectionEnd = 0
-				model.Error = ""
-				model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath)
-				updateView(model)
+				selectFile(model, path)
 			}
 		default:
 			if hasFile(model.Files, path) {
-				model.SelectedPath = path
-				model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
-				model.SelectionStart = 0
-				model.SelectionEnd = 0
-				model.Error = ""
-				model.Tree = buildTree(model.Files, model.SelectedPath)
-				updateView(model)
+				selectFile(model, path)
 			}
 		}
 		return model, nil
@@ -300,6 +316,7 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		model.Error = ""
 		model.SelectionStart = 0
 		model.SelectionEnd = 0
+		rebuildTree(model)
 		updateView(model)
 		return model, nil
 	})
@@ -331,6 +348,7 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 			return model, nil
 		}
 		model.Error = ""
+		rebuildTree(model)
 		updateView(model)
 		return model, nil
 	})
@@ -340,6 +358,7 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		id := p.Int("id")
 		deleteComment(model, id)
 		model.Error = ""
+		rebuildTree(model)
 		updateView(model)
 		return model, nil
 	})
@@ -355,6 +374,27 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 	h.HandleEvent("toggle-sidebar", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
 		model := getModel(s, rs.Model)
 		model.SidebarCollapsed = !model.SidebarCollapsed
+		return model, nil
+	})
+
+	h.HandleEvent("mark-viewed", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		wasViewed := model.Viewed[model.SelectedPath]
+		model.Viewed[model.SelectedPath] = !wasViewed
+		if !wasViewed {
+			// Just marked as viewed — advance to next unviewed
+			next := nextUnviewedFile(model)
+			if next != "" {
+				selectFile(model, next)
+			} else {
+				rebuildTree(model)
+				updateView(model)
+			}
+		} else {
+			// Unmarked — stay on current file
+			rebuildTree(model)
+			updateView(model)
+		}
 		return model, nil
 	})
 

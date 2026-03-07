@@ -13,6 +13,11 @@ type Comment struct {
 	Text      string `json:"text"`
 }
 
+type Group struct {
+	Name  string   `json:"name"`
+	Files []string `json:"files"`
+}
+
 type File struct {
 	Path      string
 	PathSlash string
@@ -20,11 +25,16 @@ type File struct {
 }
 
 type TreeItem struct {
-	Name     string
-	Path     string
-	Depth    int
-	IsDir    bool
-	Selected bool
+	Name        string
+	Path        string
+	Depth       int
+	IsDir       bool
+	Selected    bool
+	IsGroup     bool
+	Viewed      bool
+	HasComments bool
+	GroupName   string
+	GroupActive bool
 }
 
 type ViewLine struct {
@@ -95,6 +105,9 @@ type LineRange struct {
 type ReviewModel struct {
 	Files                []File
 	DiffFiles            []DiffFile
+	Viewed               map[string]bool
+	Groups               []Group
+	HasGroups            bool
 	Tree                 []TreeItem
 	SelectedPath         string
 	SelectedLabel        string
@@ -132,4 +145,5 @@ type Config struct {
 	Diff    string
 	Ranges  map[string][]LineRange
 	StdDiff string
+	Groups  []Group
 }

@@ -1,11 +1,21 @@
 package app
 
 import (
+	"path/filepath"
 	"sort"
 	"strings"
 )
 
-func buildTree(files []File, selectedPath string) []TreeItem {
+func fileHasComments(path string, comments []Comment) bool {
+	for _, c := range comments {
+		if c.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func buildTree(files []File, selectedPath string, viewed map[string]bool, comments []Comment) []TreeItem {
 	root := &treeNode{Name: "", Path: "", IsDir: true, Children: map[string]*treeNode{}}
 	for i := range files {
 		pathSlash := files[i].PathSlash
@@ -41,6 +51,10 @@ func buildTree(files []File, selectedPath string) []TreeItem {
 			}
 			if n.File != nil {
 				item.Path = n.File.Path
+				if viewed != nil {
+					item.Viewed = viewed[n.File.Path]
+				}
+				item.HasComments = fileHasComments(n.File.Path, comments)
 			}
 			items = append(items, item)
 		}
@@ -59,6 +73,94 @@ func buildTree(files []File, selectedPath string) []TreeItem {
 		}
 	}
 	walk(root, -1)
+	return items
+}
+
+func buildGroupedTree(groups []Group, files []File, selectedPath string, viewed map[string]bool, comments []Comment) []TreeItem {
+	var items []TreeItem
+	grouped := make(map[string]bool)
+
+	for _, g := range groups {
+		// Determine if the selected path belongs to this group.
+		groupActive := false
+		for _, f := range g.Files {
+			if f == selectedPath {
+				groupActive = true
+				break
+			}
+		}
+
+		// Add group header.
+		items = append(items, TreeItem{
+			Name:        g.Name,
+			Depth:       0,
+			IsGroup:     true,
+			GroupActive:  groupActive,
+		})
+
+		// Add files within this group.
+		for _, gf := range g.Files {
+			grouped[gf] = true
+			file := findFileBySlash(files, gf)
+			if file == nil {
+				continue
+			}
+			item := TreeItem{
+				Name:        filepath.Base(file.PathSlash),
+				Path:        file.Path,
+				Depth:       1,
+				Selected:    file.Path == selectedPath,
+				GroupName:   g.Name,
+				HasComments: fileHasComments(file.Path, comments),
+			}
+			if viewed != nil {
+				item.Viewed = viewed[file.Path]
+			}
+			items = append(items, item)
+		}
+	}
+
+	// Collect ungrouped files.
+	var ungrouped []File
+	for _, f := range files {
+		if !grouped[f.PathSlash] && !grouped[f.Path] {
+			ungrouped = append(ungrouped, f)
+		}
+	}
+
+	if len(ungrouped) > 0 {
+		// Determine if the selected path belongs to the Other group.
+		otherActive := false
+		for _, f := range ungrouped {
+			if f.Path == selectedPath {
+				otherActive = true
+				break
+			}
+		}
+
+		items = append(items, TreeItem{
+			Name:        "Other",
+			Depth:       0,
+			IsGroup:     true,
+			GroupActive:  otherActive,
+		})
+
+		for _, f := range ungrouped {
+			item := TreeItem{
+				Name:        filepath.Base(f.PathSlash),
+				Path:        f.Path,
+				Depth:       1,
+				Selected:    f.Path == selectedPath,
+				GroupName:   "Other",
+				HasComments: fileHasComments(f.Path, comments),
+			}
+			if viewed != nil {
+				item.Viewed = viewed[f.Path]
+			}
+			items = append(items, item)
+		}
+	}
+
 	return items
 }
 
@@ -89,6 +191,15 @@ func hasFile(files []File, path string) bool {
 func findFile(files []File, path string) *File {
 	for i := range files {
 		if files[i].Path == path {
+			return &files[i]
+		}
+	}
+	return nil
+}
+
+func findFileBySlash(files []File, pathSlash string) *File {
+	for i := range files {
+		if files[i].PathSlash == pathSlash || files[i].Path == pathSlash {
 			return &files[i]
 		}
 	}
