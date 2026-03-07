@@ -27,6 +27,7 @@ func main() {
 		port      = flag.Int("port", 0, "port to bind (0 = random)")
 		prompt    = flag.String("prompt", "", "review prompt/question to display at top")
 		diff      = flag.String("diff", "", "path to unified diff file (or pipe via stdin)")
+		groups    = flag.String("groups", "", "path to JSON file with ordered file groups")
 		ranges    listFlag
 		showHelp  = flag.Bool("help", false, "show help")
 		showSkill = flag.Bool("skill", false, "print agent skill markdown")
@@ -61,6 +62,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	var parsedGroups []app.Group
+	if *groups != "" {
+		parsedGroups, err = app.ParseGroupsFile(*groups)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
+
 	cfg := app.Config{
 		Host:    *host,
 		Port:    *port,
@@ -69,6 +79,7 @@ func main() {
 		Diff:    *diff,
 		Ranges:  rangesMap,
 		StdDiff: stdDiff,
+		Groups:  parsedGroups,
 	}
 	if err := app.Run(context.Background(), cfg); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())

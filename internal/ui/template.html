@@ -86,11 +86,17 @@
           {{if .SidebarCollapsed}}&#9654;{{else}}&#9664;{{end}}
         </button>
         {{range .Tree}}
-          {{if .IsDir}}
+          {{if .IsGroup}}
+            <div class="tree-item group{{if .GroupActive}} active-group{{end}}">{{.Name}}</div>
+          {{else if .IsDir}}
             <div class="tree-item dir" style="margin-left: {{mul .Depth 12}}px;">{{.Name}}</div>
           {{else}}
-            <div class="tree-item file {{if .Selected}}selected{{end}}" style="margin-left: {{mul .Depth 12}}px;" live-click="select-file" live-value-path="{{.Path}}">
-              {{.Name}}
+            <div class="tree-item file {{if .Selected}}selected{{end}}{{if .Viewed}} viewed{{end}}{{if .HasComments}} has-comments{{end}}" style="margin-left: {{mul .Depth 12}}px;" live-click="select-file" live-value-path="{{.Path}}">
+              <span class="tree-name">{{.Name}}</span>
+              <span class="tree-indicators">
+                {{if .HasComments}}<span class="comment-dot">&#9679;</span>{{end}}
+                {{if .Viewed}}<span class="viewed-check">&#10003;</span>{{end}}
+              </span>
             </div>
           {{end}}
         {{end}}
@@ -199,6 +205,11 @@
   {{end}}
 {{end}}
 </main>
+        <div class="content-footer">
+          <button class="btn{{if (index $root.Viewed $root.SelectedPath)}} secondary{{end}}" live-click="mark-viewed">
+            {{if (index $root.Viewed $root.SelectedPath)}}Viewed &#10003;{{else}}Mark as viewed{{end}}
+          </button>
+        </div>
       </section>
     </div>
     {{end}}

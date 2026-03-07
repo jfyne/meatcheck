@@ -16,6 +16,7 @@ meatcheck --prompt "Focus on security and error handling" <file1>
 meatcheck --diff changes.diff
 cat changes.diff | meatcheck
 meatcheck --range "path/to/file.go:10-40" <file1>
+meatcheck --groups groups.json <file1> <file2> ...
 ```
 
 The CLI opens a browser UI with a GitHub-like review layout. The reviewer can select lines/ranges, add inline comments, and click **Finish**.
@@ -40,6 +41,29 @@ In diff mode:
 - Deleted lines are shown for context but are not comment targets.
 - File and hunk headers come from the unified diff, so prefer standard `git diff` output.
 
+## Grouping files
+
+Use `--groups` to organize files into named feature groups in the sidebar tree.
+
+```bash
+meatcheck --groups groups.json <file1> <file2> ...
+meatcheck --groups groups.json --diff changes.diff
+```
+
+The JSON file contains an ordered array of groups:
+
+```json
+[
+  {"name": "Auth", "files": ["auth.go", "middleware.go"]},
+  {"name": "API", "files": ["handler.go", "routes.go"]}
+]
+```
+
+- Groups appear in the sidebar in the order specified
+- Files not assigned to any group appear in an auto-created "Other" group
+- Each file has a "Mark as viewed" button to track review progress
+- Comment indicators appear next to files with comments
+
 ## Important
 
 - Run the `meatcheck` command and wait for the process to finish.
@@ -61,4 +85,5 @@ comments[2]{end_line,path,start_line,text}:
 - Use `--prompt` to tell the reviewer what to focus on.
 - Use `--diff` or pipe a unified diff to render changes.
 - Use `--range` to render only specific sections of a file.
+- Use `--groups` to organize files into named feature groups.
 - Use `--skill` to print this SKILL.md content.

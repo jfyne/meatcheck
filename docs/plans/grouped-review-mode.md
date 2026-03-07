@@ -93,14 +93,14 @@ Add a `--groups` flag to organize files into named feature groups in the tree si
 
 ### Data Model & Types
 
-- [ ] Add `Group` type and extend `Config` and `ReviewModel` (`internal/app/model.go`) [Stage 1]
+- [x]Add `Group` type and extend `Config` and `ReviewModel` (`internal/app/model.go`) [Stage 1]
   - Files: `internal/app/model.go` (modifies)
   - Add `Group` struct: `Name string \`json:"name"\``, `Files []string \`json:"files"\``
   - Add `Groups []Group` to `Config` struct
   - Add to `ReviewModel`: `Viewed map[string]bool`, `Groups []Group`, `HasGroups bool`
   - Add to `TreeItem`: `IsGroup bool`, `Viewed bool`, `HasComments bool`, `GroupName string`, `GroupActive bool`
 
-- [ ] Add `ParseGroupsFile` function (`internal/app/io_helpers.go`) [Stage 1]
+- [x]Add `ParseGroupsFile` function (`internal/app/io_helpers.go`) [Stage 1]
   - Files: `internal/app/io_helpers.go` (modifies)
   - `func ParseGroupsFile(path string) ([]Group, error)` reads JSON file, unmarshals into `[]Group`
   - Validate: non-empty Name, non-empty Files per group
@@ -109,14 +109,14 @@ Add a `--groups` flag to organize files into named feature groups in the tree si
 
 ### Tree Building
 
-- [ ] Add `fileHasComments` helper and update `buildTree` signature (`internal/app/tree.go`) [Stage 1]
+- [x]Add `fileHasComments` helper and update `buildTree` signature (`internal/app/tree.go`) [Stage 1]
   - Files: `internal/app/tree.go` (modifies)
   - Add `func fileHasComments(path string, comments []Comment) bool`
   - Change `buildTree` signature to `buildTree(files []File, selectedPath string, viewed map[string]bool, comments []Comment) []TreeItem`
   - In the walk closure, set `item.Viewed = viewed[n.File.Path]` and `item.HasComments = fileHasComments(n.File.Path, comments)` for file nodes
   - Handle nil `viewed` map (Go map read on nil returns zero value, so no nil check needed)
 
-- [ ] Implement `buildGroupedTree` function (`internal/app/tree.go`) [Stage 1]
+- [x]Implement `buildGroupedTree` function (`internal/app/tree.go`) [Stage 1]
   - Files: `internal/app/tree.go` (modifies)
   - `func buildGroupedTree(groups []Group, files []File, selectedPath string, viewed map[string]bool, comments []Comment) []TreeItem`
   - Iterate groups in order; for each group emit a `TreeItem{Name: group.Name, IsGroup: true, Depth: 0, GroupActive: selectedPath belongs to this group}`
@@ -127,7 +127,7 @@ Add a `--groups` flag to organize files into named feature groups in the tree si
 
 ### App Layer
 
-- [ ] Add `--groups` flag, group loading, rebuildTree helper, and update all call sites (`main.go`, `internal/app/app.go`) [Stage 2]
+- [x]Add `--groups` flag, group loading, rebuildTree helper, and update all call sites (`main.go`, `internal/app/app.go`) [Stage 2]
   - Files: `main.go` (modifies), `internal/app/app.go` (modifies)
   - In `main.go`: add `groups = flag.String("groups", "", "path to JSON file with ordered file groups")`, after `ParseRangeFlag` call `app.ParseGroupsFile(*groups)` if non-empty, pass `Groups: parsedGroups` into `cfg`
   - In `app.go`: create `func rebuildTree(model *ReviewModel)` that gets file list (diffFilesAsFiles or model.Files based on mode), calls `buildGroupedTree()` if `model.HasGroups` else `buildTree()`, passes `model.Viewed` and `model.Comments`
@@ -135,7 +135,7 @@ Add a `--groups` flag to organize files into named feature groups in the tree si
   - Add `rebuildTree(model)` calls in `add-comment`, `delete-comment`, and `edit-comment` handlers (before `updateView`)
   - Initialize `Viewed: make(map[string]bool)`, `Groups: cfg.Groups`, `HasGroups: len(cfg.Groups) > 0` in ReviewModel construction in `Run()`
 
-- [ ] Add `mark-viewed` event handler with navigation (`internal/app/app.go`) [Stage 2]
+- [x]Add `mark-viewed` event handler with navigation (`internal/app/app.go`) [Stage 2]
   - Files: `internal/app/app.go` (modifies)
   - Add `func nextUnviewedFile(model *ReviewModel) string`:
     - Build ordered file path list: if HasGroups, iterate Groups in order (each group's Files); if not grouped, use `model.Files` paths (file mode) or `model.DiffFiles` paths (diff mode)
@@ -152,7 +152,7 @@ Add a `--groups` flag to organize files into named feature groups in the tree si
 
 ### UI Layer
 
-- [ ] Update tree rendering in template (`internal/ui/template.html`) [Stage 3]
+- [x]Update tree rendering in template (`internal/ui/template.html`) [Stage 3]
   - Files: `internal/ui/template.html` (modifies)
   - Replace two-branch tree rendering with three-branch: `{{if .IsGroup}}...{{else if .IsDir}}...{{else}}...{{end}}`
   - Group header: `<div class="tree-item group{{if .GroupActive}} active-group{{end}}">{{.Name}}</div>`
@@ -161,7 +161,7 @@ Add a `--groups` flag to organize files into named feature groups in the tree si
   - Add content footer below `</main>` with "Mark as viewed" button: `live-click="mark-viewed"`
   - Button text toggles: "Mark as viewed" / "Viewed &#10003;"
 
-- [ ] Add CSS for groups, indicators, and content footer (`internal/ui/styles.css`) [Stage 3]
+- [x]Add CSS for groups, indicators, and content footer (`internal/ui/styles.css`) [Stage 3]
   - Files: `internal/ui/styles.css` (modifies)
   - `.tree-item.group` — bold, uppercase, border-bottom separator
   - `.tree-item.group.active-group` — accent color highlight
@@ -173,14 +173,14 @@ Add a `--groups` flag to organize files into named feature groups in the tree si
   - Update `.main` grid-template-rows to `auto 1fr auto`
   - Add `justify-content: space-between` to `.tree-item.file`
 
-- [ ] Update help text and skill documentation [Stage 3]
+- [x]Update help text and skill documentation [Stage 3]
   - Files: `internal/app/app.go` (modifies), `internal/app/skill.md` (modifies)
   - Add `--groups` to `PrintHelp()` flags list and usage examples
   - Add `--groups` usage and JSON format to skill.md
 
 ### Tests
 
-- [ ] Write tests for ParseGroupsFile (`internal/app/groups_test.go`) [Stage 1]
+- [x]Write tests for ParseGroupsFile (`internal/app/groups_test.go`) [Stage 1]
   - Files: `internal/app/groups_test.go` (creates)
   - Valid JSON array with multiple groups
   - Invalid JSON returns error
@@ -188,12 +188,12 @@ Add a `--groups` flag to organize files into named feature groups in the tree si
   - Group with empty files list returns error
   - Non-existent file path returns error
 
-- [ ] Write tests for buildTree viewed/commented and buildGroupedTree (`internal/app/tree_test.go`) [Stage 1]
+- [x]Write tests for buildTree viewed/commented and buildGroupedTree (`internal/app/tree_test.go`) [Stage 1]
   - Files: `internal/app/tree_test.go` (creates)
   - buildTree: viewed=true sets Viewed on item, comment exists sets HasComments, nil viewed safe
   - buildGroupedTree: group headers produced with IsGroup/Depth=0, files at Depth=1 with GroupName, "Other" group for ungrouped, ordering preserved, selected file correct
 
-- [ ] Write tests for nextUnviewedFile navigation (`internal/app/viewed_test.go`) [Stage 2]
+- [x]Write tests for nextUnviewedFile navigation (`internal/app/viewed_test.go`) [Stage 2]
   - Files: `internal/app/viewed_test.go` (creates)
   - Ungrouped: next unviewed, wrap-around, all viewed returns ""
   - Grouped: within-group advance, cross-group advance, all viewed
