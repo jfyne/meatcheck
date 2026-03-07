@@ -110,6 +110,9 @@
       <section class="main">
         <div class="column-header">
           <div class="path">{{.SelectedLabel}}</div>
+          <button class="btn btn-sm{{if (index $root.Viewed $root.SelectedPath)}} secondary{{end}}" live-click="mark-viewed">
+            {{if (index $root.Viewed $root.SelectedPath)}}Viewed &#10003;{{else}}Mark Viewed{{end}}
+          </button>
         </div>
         <main class="content">
           {{if eq $root.Mode "diff"}}
@@ -205,11 +208,6 @@
   {{end}}
 {{end}}
 </main>
-        <div class="content-footer">
-          <button class="btn{{if (index $root.Viewed $root.SelectedPath)}} secondary{{end}}" live-click="mark-viewed">
-            {{if (index $root.Viewed $root.SelectedPath)}}Viewed &#10003;{{else}}Mark as viewed{{end}}
-          </button>
-        </div>
       </section>
     </div>
     {{end}}
