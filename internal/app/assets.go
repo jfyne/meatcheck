@@ -138,10 +138,7 @@ func renderMarkdownBlocks(path, input string) []MarkdownBlock {
 		}
 	}
 	byteToLine := func(offset int) int {
-		idx := sort.SearchInts(lineStarts, offset+1) - 1
-		if idx < 0 {
-			idx = 0
-		}
+		idx := max(sort.SearchInts(lineStarts, offset+1)-1, 0)
 		return idx + 1 + fmLineCount // 1-based, offset by frontmatter
 	}
 

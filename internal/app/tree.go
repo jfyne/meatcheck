@@ -2,6 +2,7 @@ package app
 
 import (
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -82,20 +83,14 @@ func buildGroupedTree(groups []Group, files []File, selectedPath string, viewed 
 
 	for _, g := range groups {
 		// Determine if the selected path belongs to this group.
-		groupActive := false
-		for _, f := range g.Files {
-			if f == selectedPath {
-				groupActive = true
-				break
-			}
-		}
+		groupActive := slices.Contains(g.Files, selectedPath)
 
 		// Add group header.
 		items = append(items, TreeItem{
 			Name:        g.Name,
 			Depth:       0,
 			IsGroup:     true,
-			GroupActive:  groupActive,
+			GroupActive: groupActive,
 		})
 
 		// Add files within this group.
@@ -142,7 +137,7 @@ func buildGroupedTree(groups []Group, files []File, selectedPath string, viewed 
 			Name:        "Other",
 			Depth:       0,
 			IsGroup:     true,
-			GroupActive:  otherActive,
+			GroupActive: otherActive,
 		})
 
 		for _, f := range ungrouped {
