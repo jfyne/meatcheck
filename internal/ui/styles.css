@@ -153,13 +153,14 @@ body {
 
 .main {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr;
   min-height: 0;
 }
 
 .column-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 10px 24px 12px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
@@ -262,6 +263,11 @@ body {
   border-radius: 0;
   cursor: pointer;
   font-weight: 600;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
 }
 
 .btn.secondary {
@@ -391,14 +397,6 @@ body {
 
 .footer {
   padding: 16px 24px;
-  border-top: 1px solid var(--border);
-  background: var(--panel);
-}
-
-.content-footer {
-  display: flex;
-  align-items: center;
-  padding: 10px 24px;
   border-top: 1px solid var(--border);
   background: var(--panel);
 }
