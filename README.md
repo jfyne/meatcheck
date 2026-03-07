@@ -14,6 +14,9 @@ A local PR‑style review UI for LLM workflows. Run the `meatcheck` CLI with a s
 - Inline comment threads under the referenced line
 - Markdown rendering for comments (toggle raw/rendered)
 - Syntax highlighting for code (toggle raw/rendered)
+- Grouped review mode — organize files into named groups via `--groups`
+- Per‑file viewed/commented indicators in the tree sidebar
+- "Mark as viewed" advances to the next unviewed file
 - Outputs TOON format to stdout on Finish
 
 ## Install / Build
@@ -40,6 +43,23 @@ cat changes.diff | ./meatcheck
 
 # render only a section of a file
 ./meatcheck --range "path/to/file.go:10-40" path/to/file.go
+
+# organize files into named groups
+./meatcheck --groups groups.json path/to/auth.go path/to/handler.go path/to/utils.go
+
+# groups work with diff mode too
+./meatcheck --groups groups.json --diff changes.diff
+```
+
+### Groups JSON format
+
+The `--groups` flag takes a path to a JSON file that defines an ordered list of named groups. Files not assigned to any group appear under an automatic "Other" group.
+
+```json
+[
+  { "name": "Auth", "files": ["path/to/auth.go", "path/to/middleware.go"] },
+  { "name": "API",  "files": ["path/to/handler.go"] }
+]
 ```
 
 ## Keyboard Shortcuts
