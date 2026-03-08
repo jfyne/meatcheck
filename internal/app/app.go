@@ -94,7 +94,23 @@ func Run(ctx context.Context, cfg Config) error {
 		model.PromptHTML = renderMarkdown(cfg.Prompt)
 	}
 	model.CodeViewKey = fmt.Sprintf("%d", time.Now().UnixNano())
-	if mode == ModeDiff {
+	if model.HasGroups {
+		// Select first file from first group to respect defined order.
+		if mode == ModeDiff {
+			df := diffFilesAsFiles(diffFiles)
+			if f := findFileBySlash(df, cfg.Groups[0].Files[0]); f != nil {
+				model.SelectedPath = f.Path
+			} else {
+				model.SelectedPath = diffFiles[0].Path
+			}
+		} else {
+			if f := findFileBySlash(files, cfg.Groups[0].Files[0]); f != nil {
+				model.SelectedPath = f.Path
+			} else {
+				model.SelectedPath = files[0].Path
+			}
+		}
+	} else if mode == ModeDiff {
 		model.SelectedPath = diffFiles[0].Path
 	} else {
 		model.SelectedPath = files[0].Path
