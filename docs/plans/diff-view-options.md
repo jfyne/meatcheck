@@ -91,21 +91,21 @@ Add switchable unified/side-by-side diff view with localStorage persistence, ena
 
 ### Data Model
 
-- [ ] Add `DiffFormat` type and constants [Stage 1]
+- [x] Add `DiffFormat` type and constants [Stage 1]
   - Files: `internal/app/model.go` (modifies)
   - Add `type DiffFormat string` with `DiffFormatUnified DiffFormat = "unified"` and `DiffFormatSplit DiffFormat = "split"`.
   - Add `DiffFormat DiffFormat` field to `ReviewModel` struct.
 
-- [ ] Add `Side` field to `Comment` struct [Stage 1]
+- [x] Add `Side` field to `Comment` struct [Stage 1]
   - Files: `internal/app/model.go` (modifies)
   - Add `Side string \`json:"side,omitempty"\`` after `EndLine`. Values: `""` (new, default), `"old"`.
   - `omitempty` ensures backward compatibility in TOON output.
 
-- [ ] Add `SelectionSide` field to `ReviewModel` [Stage 1]
+- [x] Add `SelectionSide` field to `ReviewModel` [Stage 1]
   - Files: `internal/app/model.go` (modifies)
   - Add `SelectionSide string` near `SelectionStart`/`SelectionEnd`.
 
-- [ ] Add `ViewDiffRow` and `ViewDiffSide` types for side-by-side view [Stage 1]
+- [x] Add `ViewDiffRow` and `ViewDiffSide` types for side-by-side view [Stage 1]
   - Files: `internal/app/model.go` (modifies)
   - `ViewDiffSide`: `Line int`, `Kind DiffLineKind`, `Text string`, `HTML template.HTML`, `Empty bool`, `Selected bool`, `Commented bool`, `Comments []ViewComment`
   - `ViewDiffRow`: `Left ViewDiffSide`, `Right ViewDiffSide`
@@ -114,30 +114,30 @@ Add switchable unified/side-by-side diff view with localStorage persistence, ena
 
 ### View Building
 
-- [ ] Update `projectLineComments` for side-aware matching [Stage 1]
+- [x] Update `projectLineComments` for side-aware matching [Stage 1]
   - Files: `internal/app/view.go` (modifies)
   - Add `side string` parameter. Filter `c.Side` against the provided side. Treat `c.Side == ""` as `"new"` for backward compat.
   - Update all call sites: `buildViewDiff` (2 calls), `buildSingleViewLine` (1 call). File-mode calls pass `""`.
 
-- [ ] Add `diffOldLineExists` function [Stage 1]
+- [x] Add `diffOldLineExists` function [Stage 1]
   - Files: `internal/app/view.go` (modifies)
   - Same structure as `diffLineExists` but checks `dl.OldLine == oldLine && dl.Kind != DiffAdd`.
 
-- [ ] Update `buildViewDiff` for old-line selection and commenting [Stage 2]
+- [x] Update `buildViewDiff` for old-line selection and commenting [Stage 2]
   - Files: `internal/app/view.go` (modifies)
   - Accept `selectionSide string` parameter.
   - Remove the `selectable` guard that blocks deleted lines. All lines with OldLine > 0 or NewLine > 0 are selectable.
   - When `selectionSide == "old"`, check selection against `dl.OldLine`; otherwise `dl.NewLine`.
   - Project comments: call `projectLineComments` with side `""` on `dl.NewLine` and side `"old"` on `dl.OldLine`, merge results.
 
-- [ ] Update `updateDiffView` to dispatch on DiffFormat [Stage 2]
+- [x] Update `updateDiffView` to dispatch on DiffFormat [Stage 2]
   - Files: `internal/app/view.go` (modifies)
   - When `DiffFormatSplit`, call `buildViewDiffSplit` and populate `model.ViewDiffSplit`.
   - When `DiffFormatUnified` (or default), use existing `buildViewDiff`.
   - Clear both `model.ViewDiff` and `model.ViewDiffSplit` at the start.
   - Pass `model.SelectionSide` to `buildViewDiff` (and later `buildViewDiffSplit`) for correct selection highlighting.
 
-- [ ] Implement `buildViewDiffSplit` pairing algorithm [Stage 3]
+- [x] Implement `buildViewDiffSplit` pairing algorithm [Stage 3]
   - Files: `internal/app/view.go` (modifies)
   - For each hunk, pair lines into rows:
     - Context lines: both Left and Right populated with same text
@@ -147,7 +147,7 @@ Add switchable unified/side-by-side diff view with localStorage persistence, ena
 
 ### Event Handlers
 
-- [ ] Update all app.go handlers and initialization for diff format and old-line support [Stage 2]
+- [x] Update all app.go handlers and initialization for diff format and old-line support [Stage 2]
   - Files: `internal/app/app.go` (modifies)
   - **New handlers**:
     - `toggle-diff-format`: toggle `model.DiffFormat` between `DiffFormatUnified` and `DiffFormatSplit`. Clear selection state (`SelectionStart`, `SelectionEnd`, `SelectionSide`). Call `updateView(model)`.
@@ -160,7 +160,7 @@ Add switchable unified/side-by-side diff view with localStorage persistence, ena
 
 ### Template and UI
 
-- [ ] Update template.html for diff format toggle, side-by-side view, old-line support, and localStorage [Stage 4]
+- [x] Update template.html for diff format toggle, side-by-side view, old-line support, and localStorage [Stage 4]
   - Files: `internal/ui/template.html` (modifies)
   - **Toggle button**: Add diff format toggle in `.column-header`, only visible when `$root.Mode == "diff"`. Uses `live-click="toggle-diff-format"`. SVG icon of two rectangles side by side. `active` class when `$root.DiffFormat == "split"`.
   - **Unified view old-line support**: Add `data-old-line="{{.OldLine}}"` to `.diff-line` div (line 123). Show comment threads on deleted lines — update template conditional so comments render when OldLine > 0 and the comment has side `"old"`. Update the inline-comment form conditional (template line 136) to also trigger when `$root.SelectionSide == "old"` and `.OldLine == $root.SelectionEnd`.
@@ -170,11 +170,11 @@ Add switchable unified/side-by-side diff view with localStorage persistence, ena
 
 ### CSS
 
-- [ ] Change `.diff` background to black [Stage 1]
+- [x] Change `.diff` background to black [Stage 1]
   - Files: `internal/ui/styles.css` (modifies)
   - Change line 777 from `background: var(--panel)` to `background: #000000`.
 
-- [ ] Add side-by-side CSS layout [Stage 4]
+- [x] Add side-by-side CSS layout [Stage 4]
   - Files: `internal/ui/styles.css` (modifies)
   - `.diff-row-split`: `display: grid; grid-template-columns: 1fr 1fr`
   - `.diff-cell`: `display: grid; grid-template-columns: 4ch 1ch max-content; gap: 12px`
