@@ -12,11 +12,14 @@ A local PR‑style review UI for LLM workflows. Run the `meatcheck` CLI with a s
 - File tree + code view UI similar to GitHub PR reviews
 - Click to select a line, shift‑click for a range
 - Inline comment threads under the referenced line
+- Unified and side‑by‑side diff views (toggle via toolbar button)
+- Comment on both added and deleted lines in diff mode
 - Markdown rendering for comments (toggle raw/rendered)
 - Syntax highlighting for code (toggle raw/rendered)
 - Grouped review mode — organize files into named groups via `--groups`
 - Per‑file viewed/commented indicators in the tree sidebar
 - "Mark as viewed" advances to the next unviewed file
+- Preferences (diff format, sidebar width) persist across sessions via XDG config
 - Outputs TOON format to stdout on Finish
 
 ## Install / Build
@@ -65,6 +68,13 @@ The `--groups` flag takes a path to a JSON file that defines an ordered list of 
 ## Keyboard Shortcuts
 
 - `Ctrl+Enter` / `Cmd+Enter`: submit the inline comment
+
+## Preferences
+
+Meatcheck stores user preferences at `$XDG_CONFIG_HOME/meatcheck/preferences.json` (typically `~/.config/meatcheck/preferences.json`). Currently persisted settings:
+
+- **Diff format** — unified or side‑by‑side
+- **Sidebar width** — drag‑resized column width
 
 ## Output
 
