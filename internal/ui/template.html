@@ -110,30 +110,60 @@
       <section class="main">
         <div class="column-header">
           <div class="path">{{.SelectedLabel}}</div>
+          {{if eq $root.Mode "diff"}}
+          <button class="icon-btn{{if eq $root.DiffFormat "split"}} active{{end}}" live-click="toggle-diff-format" title="Toggle side-by-side view" aria-label="Toggle side-by-side view">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="2" y="3" width="8" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="14" y="3" width="8" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </button>
+          {{end}}
           <button class="btn btn-sm{{if (index $root.Viewed $root.SelectedPath)}} secondary{{end}}" live-click="mark-viewed">
             {{if (index $root.Viewed $root.SelectedPath)}}Viewed &#10003;{{else}}Mark Viewed{{end}}
           </button>
         </div>
         <main class="content">
           {{if eq $root.Mode "diff"}}
-  <div class="diff" id="code-view-{{.CodeViewKey}}">
-    {{range .ViewDiff.Hunks}}
+  {{if eq $root.DiffFormat "split"}}
+  <div class="diff diff-split" id="code-view-{{.CodeViewKey}}">
+    {{range .ViewDiffSplit}}
       <div class="hunk-header">{{.Header}}</div>
-      {{range .Lines}}
-        <div class="diff-line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}" data-line="{{.NewLine}}" data-new-line="{{.NewLine}}" data-kind="{{.Kind}}">
-          <span class="ln old">{{if gt .OldLine 0}}{{.OldLine}}{{end}}</span>
-          <span class="ln new" data-line="{{.NewLine}}">{{if gt .NewLine 0}}{{.NewLine}}{{end}}</span>
-          <span class="diff-sign {{.Kind}}">{{if eq .Kind "add"}}+{{else if eq .Kind "del"}}-{{else}} {{end}}</span>
-          <div class="code-text {{if $root.RenderFile}}chroma{{end}}">
-            {{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}
-          </div>
+      {{range .Rows}}
+        <div class="diff-row-split">
+          {{if .Left.Empty}}
+            <div class="diff-cell empty"></div>
+          {{else}}
+            <div class="diff-cell {{if .Left.Selected}}selected{{end}} {{if .Left.Commented}}commented{{end}}" data-old-line="{{.Left.Line}}" data-kind="{{.Left.Kind}}">
+              <span class="ln">{{if gt .Left.Line 0}}{{.Left.Line}}{{end}}</span>
+              <span class="diff-sign {{.Left.Kind}}">{{if eq .Left.Kind "add"}}+{{else if eq .Left.Kind "del"}}-{{else}} {{end}}</span>
+              <div class="code-text {{if $root.RenderFile}}chroma{{end}}">
+                {{if $root.RenderFile}}{{.Left.HTML}}{{else}}{{.Left.Text}}{{end}}
+              </div>
+            </div>
+          {{end}}
+          {{if .Right.Empty}}
+            <div class="diff-cell empty"></div>
+          {{else}}
+            <div class="diff-cell {{if .Right.Selected}}selected{{end}} {{if .Right.Commented}}commented{{end}}" data-line="{{.Right.Line}}" data-kind="{{.Right.Kind}}">
+              <span class="ln">{{if gt .Right.Line 0}}{{.Right.Line}}{{end}}</span>
+              <span class="diff-sign {{.Right.Kind}}">{{if eq .Right.Kind "add"}}+{{else if eq .Right.Kind "del"}}-{{else}} {{end}}</span>
+              <div class="code-text {{if $root.RenderFile}}chroma{{end}}">
+                {{if $root.RenderFile}}{{.Right.HTML}}{{else}}{{.Right.Text}}{{end}}
+              </div>
+            </div>
+          {{end}}
         </div>
-        {{if .Comments}}
+        {{if or .Left.Comments .Right.Comments}}
           <div class="line-comment-thread">
-            {{template "commentThread" (commentThreadData $root .Comments $.Logo)}}
+            {{if .Left.Comments}}
+              {{template "commentThread" (commentThreadData $root .Left.Comments $.Logo)}}
+            {{end}}
+            {{if .Right.Comments}}
+              {{template "commentThread" (commentThreadData $root .Right.Comments $.Logo)}}
+            {{end}}
           </div>
         {{end}}
-        {{if and (gt $root.SelectionEnd 0) (eq .NewLine $root.SelectionEnd) (ne .Kind "del")}}
+        {{if and (gt $root.SelectionEnd 0) (or (and (ne $root.SelectionSide "old") (not .Right.Empty) (eq .Right.Line $root.SelectionEnd)) (and (eq $root.SelectionSide "old") (not .Left.Empty) (eq .Left.Line $root.SelectionEnd)))}}
           <div class="inline-comment">
             <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
               <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
@@ -149,6 +179,41 @@
       {{end}}
     {{end}}
   </div>
+  {{else}}
+  <div class="diff" id="code-view-{{.CodeViewKey}}">
+    {{range .ViewDiff.Hunks}}
+      <div class="hunk-header">{{.Header}}</div>
+      {{range .Lines}}
+        <div class="diff-line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}" data-line="{{.NewLine}}" data-new-line="{{.NewLine}}" data-old-line="{{.OldLine}}" data-kind="{{.Kind}}">
+          <span class="ln old">{{if gt .OldLine 0}}{{.OldLine}}{{end}}</span>
+          <span class="ln new" data-line="{{.NewLine}}">{{if gt .NewLine 0}}{{.NewLine}}{{end}}</span>
+          <span class="diff-sign {{.Kind}}">{{if eq .Kind "add"}}+{{else if eq .Kind "del"}}-{{else}} {{end}}</span>
+          <div class="code-text {{if $root.RenderFile}}chroma{{end}}">
+            {{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}
+          </div>
+        </div>
+        {{if .Comments}}
+          <div class="line-comment-thread">
+            {{template "commentThread" (commentThreadData $root .Comments $.Logo)}}
+          </div>
+        {{end}}
+        {{if and (gt $root.SelectionEnd 0) (or (and (eq .NewLine $root.SelectionEnd) (ne .Kind "del") (ne $root.SelectionSide "old")) (and (eq $root.SelectionSide "old") (eq .OldLine $root.SelectionEnd)))}}
+          <div class="inline-comment">
+            <form id="comment-form-{{id $root.SelectedPath}}-{{$root.SelectionEnd}}" class="comment-form" live-submit="add-comment">
+              <div class="inline-meta">Selected: {{$root.SelectionStart}}-{{$root.SelectionEnd}}</div>
+              <textarea name="comment" placeholder="Leave a comment..." autofocus></textarea>
+              {{if $root.Error}}<div class="error">{{$root.Error}}</div>{{end}}
+              <div class="comment-actions">
+                <button class="btn secondary" type="button" live-click="cancel-comment">Cancel</button>
+                <button class="btn" type="submit">Add Comment</button>
+              </div>
+            </form>
+          </div>
+        {{end}}
+      {{end}}
+    {{end}}
+  </div>
+  {{end}}
 {{else}}
   {{if and .ViewFile.MarkdownFile .ViewFile.MarkdownRendered}}
   <div class="markdown-file-preview markdown" id="code-view-{{.CodeViewKey}}">
@@ -228,6 +293,20 @@
           }
         })();
 
+        // Restore diff format from localStorage
+        (function () {
+          var saved = null;
+          try { saved = localStorage.getItem("meatcheck-diff-format"); } catch (e) {}
+          if (saved) {
+            var poll = setInterval(function () {
+              if (window.Live && typeof window.Live.send === "function") {
+                clearInterval(poll);
+                window.Live.send("init-diff-format", { format: saved });
+              }
+            }, 50);
+          }
+        })();
+
         // Drag-to-resize sidebar
         (function () {
           var handle = root.querySelector(".sidebar-resize-handle");
@@ -275,12 +354,20 @@
           const target = ev.target;
           if (!target || !(target instanceof Element)) return;
           if (target.closest(".inline-comment, .line-comment-thread, .comment-form")) return;
-          const clickable = target.closest("[data-line]");
+          const clickable = target.closest("[data-line], [data-old-line]");
           if (!clickable) return;
-          const line = Number(clickable.dataset.line || 0);
-          if (!line) return;
+          var line = Number(clickable.dataset.line || 0);
           const lineEnd = Number(clickable.dataset.lineEnd || 0);
+          const oldLine = Number(clickable.dataset.oldLine || 0);
           const shift = ev.shiftKey ? "1" : "";
+          // If NewLine is 0, fall back to OldLine
+          if (!line && oldLine) {
+            if (window.Live && typeof window.Live.send === "function") {
+              window.Live.send("select-line", { line: "0", old_line: String(oldLine), shift: shift });
+            }
+            return;
+          }
+          if (!line) return;
           if (window.Live && typeof window.Live.send === "function") {
             window.Live.send("select-line", { line: line, line_end: lineEnd || line, shift: shift });
           }
@@ -306,6 +393,16 @@
           if (action && id && window.Live && typeof window.Live.send === "function") {
             window.Live.send(action, { id: id });
           }
+        });
+        // Persist diff format to localStorage on toggle
+        root.addEventListener("click", (ev) => {
+          const target = ev.target;
+          if (!target || !(target instanceof Element)) return;
+          var btn = target.closest("[live-click]");
+          if (!btn || btn.getAttribute("live-click") !== "toggle-diff-format") return;
+          var isCurrentlySplit = !!root.querySelector('.diff-split');
+          var newFormat = isCurrentlySplit ? "unified" : "split";
+          try { localStorage.setItem("meatcheck-diff-format", newFormat); } catch (e) {}
         });
         root.addEventListener("keydown", (ev) => {
           const target = ev.target;

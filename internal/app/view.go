@@ -59,13 +59,139 @@ func updateFileView(model *ReviewModel) {
 }
 
 func updateDiffView(model *ReviewModel) {
+	model.ViewDiff = ViewDiffFile{}
+	model.ViewDiffSplit = nil
+
 	diffFile := findDiffFile(model.DiffFiles, model.SelectedPath)
-	viewDiff := ViewDiffFile{Path: model.SelectedPath}
 	if diffFile != nil {
-		viewDiff = buildViewDiff(diffFile, model.Comments, model.SelectionStart, model.SelectionEnd, model.RenderFile, model.EditingCommentID)
+		switch model.DiffFormat {
+		case DiffFormatSplit:
+			model.ViewDiffSplit = buildViewDiffSplit(diffFile, model.Comments, model.SelectionStart, model.SelectionEnd, model.RenderFile, model.EditingCommentID, model.SelectionSide)
+		default:
+			model.ViewDiff = buildViewDiff(diffFile, model.Comments, model.SelectionStart, model.SelectionEnd, model.RenderFile, model.EditingCommentID, model.SelectionSide)
+		}
 	}
-	model.ViewDiff = viewDiff
 	model.SelectedLabel = model.SelectedPath
+}
+
+func buildViewDiffSplit(file *DiffFile, comments []Comment, start, end int, render bool, editingID int, selectionSide string) []ViewDiffSplitHunk {
+	hunks := make([]ViewDiffSplitHunk, 0, len(file.Hunks))
+	for _, h := range file.Hunks {
+		hdr := fmt.Sprintf("@@ -%d,%d +%d,%d @@", h.OldStart, h.OldCount, h.NewStart, h.NewCount)
+		vh := ViewDiffSplitHunk{Header: hdr}
+
+		// Render syntax highlighting for all lines in the hunk if requested.
+		var rendered []template.HTML
+		if render {
+			texts := make([]string, 0, len(h.Lines))
+			for _, dl := range h.Lines {
+				texts = append(texts, dl.Text)
+			}
+			rendered = codeRenderer.RenderLines(file.Path, texts)
+		}
+
+		// Process lines: walk sequentially, grouping del/add blocks together.
+		lines := h.Lines
+		i := 0
+		for i < len(lines) {
+			dl := lines[i]
+			if dl.Kind == DiffContext {
+				// Context line: both sides populated.
+				row := ViewDiffRow{
+					Left: ViewDiffSide{
+						Line: dl.OldLine,
+						Kind: DiffContext,
+						Text: dl.Text,
+					},
+					Right: ViewDiffSide{
+						Line: dl.NewLine,
+						Kind: DiffContext,
+						Text: dl.Text,
+					},
+				}
+				if len(rendered) > i {
+					row.Left.HTML = rendered[i]
+					row.Right.HTML = rendered[i]
+				}
+				vh.Rows = append(vh.Rows, row)
+				i++
+			} else {
+				// Collect consecutive del lines, then consecutive add lines.
+				var dels []int // indices into lines
+				var adds []int
+				for i < len(lines) && lines[i].Kind == DiffDel {
+					dels = append(dels, i)
+					i++
+				}
+				for i < len(lines) && lines[i].Kind == DiffAdd {
+					adds = append(adds, i)
+					i++
+				}
+
+				// Zip dels and adds 1:1.
+				maxLen := max(len(dels), len(adds))
+				for j := 0; j < maxLen; j++ {
+					row := ViewDiffRow{}
+					if j < len(dels) {
+						idx := dels[j]
+						row.Left = ViewDiffSide{
+							Line: lines[idx].OldLine,
+							Kind: DiffDel,
+							Text: lines[idx].Text,
+						}
+						if len(rendered) > idx {
+							row.Left.HTML = rendered[idx]
+						}
+					} else {
+						row.Left = ViewDiffSide{Empty: true}
+					}
+					if j < len(adds) {
+						idx := adds[j]
+						row.Right = ViewDiffSide{
+							Line: lines[idx].NewLine,
+							Kind: DiffAdd,
+							Text: lines[idx].Text,
+						}
+						if len(rendered) > idx {
+							row.Right.HTML = rendered[idx]
+						}
+					} else {
+						row.Right = ViewDiffSide{Empty: true}
+					}
+					vh.Rows = append(vh.Rows, row)
+				}
+			}
+		}
+
+		// Apply selection and comment projection to each row.
+		for ri := range vh.Rows {
+			row := &vh.Rows[ri]
+
+			// Selection projection.
+			if start > 0 && end > 0 {
+				if selectionSide == "old" {
+					if !row.Left.Empty && row.Left.Line > 0 && row.Left.Line >= start && row.Left.Line <= end {
+						row.Left.Selected = true
+					}
+				} else {
+					if !row.Right.Empty && row.Right.Line > 0 && row.Right.Line >= start && row.Right.Line <= end {
+						row.Right.Selected = true
+					}
+				}
+			}
+
+			// Comment projection: left side uses "old", right side uses "".
+			if !row.Left.Empty && row.Left.Line > 0 {
+				row.Left.Commented, row.Left.Comments = projectLineComments(file.Path, row.Left.Line, comments, editingID, "old")
+			}
+			if !row.Right.Empty && row.Right.Line > 0 {
+				row.Right.Commented, row.Right.Comments = projectLineComments(file.Path, row.Right.Line, comments, editingID, "")
+			}
+		}
+
+		hunks = append(hunks, vh)
+	}
+	return hunks
 }
 
 func buildViewLinesWithRanges(file *File, comments []Comment, start, end int, rendered []template.HTML, ranges []LineRange, editingID int) []ViewLine {
@@ -92,7 +218,7 @@ func buildSingleViewLine(file *File, comments []Comment, start, end int, rendere
 	lineNum := idx + 1
 	raw := file.Lines[idx]
 	selected := start > 0 && end > 0 && lineNum >= start && lineNum <= end
-	commented, lineComments := projectLineComments(file.Path, lineNum, comments, editingID)
+	commented, lineComments := projectLineComments(file.Path, lineNum, comments, editingID, "")
 
 	lineHTML := template.HTML("")
 	if len(rendered) > idx {
@@ -116,7 +242,7 @@ func buildViewLines(file *File, comments []Comment, start, end int, rendered []t
 	return lines
 }
 
-func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bool, editingID int) ViewDiffFile {
+func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bool, editingID int, selectionSide string) ViewDiffFile {
 	view := ViewDiffFile{Path: file.Path}
 	for _, h := range file.Hunks {
 		hdr := fmt.Sprintf("@@ -%d,%d +%d,%d @@", h.OldStart, h.OldCount, h.NewStart, h.NewCount)
@@ -139,15 +265,28 @@ func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bo
 			if len(rendered) > i {
 				line.HTML = rendered[i]
 			}
-			selectable := dl.NewLine > 0 && dl.Kind != DiffDel
-			if selectable && start > 0 && end > 0 && dl.NewLine >= start && dl.NewLine <= end {
-				line.Selected = true
+			// Selection: when selectionSide == "old", check OldLine; otherwise check NewLine
+			if start > 0 && end > 0 {
+				if selectionSide == "old" {
+					if dl.OldLine > 0 && dl.OldLine >= start && dl.OldLine <= end {
+						line.Selected = true
+					}
+				} else {
+					if dl.NewLine > 0 && dl.NewLine >= start && dl.NewLine <= end {
+						line.Selected = true
+					}
+				}
 			}
+			// Project comments from both sides, merge results
 			if dl.NewLine > 0 {
-				line.Commented, line.Comments = projectLineComments(file.Path, dl.NewLine, comments, editingID)
+				line.Commented, line.Comments = projectLineComments(file.Path, dl.NewLine, comments, editingID, "")
 			}
-			if !selectable {
-				line.Selected = false
+			if dl.OldLine > 0 {
+				oldCommented, oldComments := projectLineComments(file.Path, dl.OldLine, comments, editingID, "old")
+				if oldCommented {
+					line.Commented = true
+				}
+				line.Comments = append(line.Comments, oldComments...)
 			}
 			vh.Lines = append(vh.Lines, line)
 		}
@@ -156,12 +295,22 @@ func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bo
 	return view
 }
 
-func projectLineComments(path string, lineNum int, comments []Comment, editingID int) (bool, []ViewComment) {
+func projectLineComments(path string, lineNum int, comments []Comment, editingID int, side string) (bool, []ViewComment) {
 	commented := false
 	lineComments := make([]ViewComment, 0)
 	for _, c := range comments {
 		if c.Path != path {
 			continue
+		}
+		// Side-aware filtering: "" matches new-side (c.Side == ""), "old" matches old-side (c.Side == "old")
+		if side == "" {
+			if c.Side != "" {
+				continue
+			}
+		} else {
+			if c.Side != side {
+				continue
+			}
 		}
 		if lineNum >= c.StartLine && lineNum <= c.EndLine {
 			commented = true

@@ -84,6 +84,7 @@ func Run(ctx context.Context, cfg Config) error {
 		SelectedPath:         "",
 		SelectedLabel:        "",
 		Mode:                 mode,
+		DiffFormat:           DiffFormatUnified,
 		RenderFile:           true,
 		RenderComments:       true,
 		Prompt:               cfg.Prompt,
@@ -280,17 +281,28 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		model := getModel(s, rs.Model)
 		line := p.Int("line")
 		lineEnd := p.Int("line_end")
+		oldLine := p.Int("old_line")
 		shift := p.String("shift") == "1"
-		if line <= 0 {
-			return model, nil
+		if model.Mode == ModeDiff && oldLine > 0 {
+			if !diffOldLineExists(model.DiffFiles, model.SelectedPath, oldLine) {
+				return model, nil
+			}
+			line = oldLine
+			lineEnd = oldLine
+			model.SelectionSide = "old"
+		} else {
+			if line <= 0 {
+				return model, nil
+			}
+			if model.Mode == ModeDiff {
+				if !diffLineExists(model.DiffFiles, model.SelectedPath, line) {
+					return model, nil
+				}
+			}
+			model.SelectionSide = ""
 		}
 		if lineEnd < line {
 			lineEnd = line
-		}
-		if model.Mode == ModeDiff {
-			if !diffLineExists(model.DiffFiles, model.SelectedPath, line) {
-				return model, nil
-			}
 		}
 		if shift && model.SelectionStart > 0 {
 			start := model.SelectionStart
@@ -326,12 +338,14 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 			Path:      model.SelectedPath,
 			StartLine: model.SelectionStart,
 			EndLine:   model.SelectionEnd,
+			Side:      model.SelectionSide,
 			Text:      text,
 		})
 		model.CommentDraft = ""
 		model.Error = ""
 		model.SelectionStart = 0
 		model.SelectionEnd = 0
+		model.SelectionSide = ""
 		rebuildTree(model)
 		updateView(model)
 		return model, nil
@@ -343,6 +357,7 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		model.Error = ""
 		model.SelectionStart = 0
 		model.SelectionEnd = 0
+		model.SelectionSide = ""
 		updateView(model)
 		return model, nil
 	})
@@ -409,6 +424,30 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		} else {
 			// Unmarked — stay on current file
 			rebuildTree(model)
+			updateView(model)
+		}
+		return model, nil
+	})
+
+	h.HandleEvent("toggle-diff-format", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		if model.DiffFormat == DiffFormatSplit {
+			model.DiffFormat = DiffFormatUnified
+		} else {
+			model.DiffFormat = DiffFormatSplit
+		}
+		model.SelectionStart = 0
+		model.SelectionEnd = 0
+		model.SelectionSide = ""
+		updateView(model)
+		return model, nil
+	})
+
+	h.HandleEvent("init-diff-format", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+		model := getModel(s, rs.Model)
+		format := p.String("format")
+		if format == string(DiffFormatUnified) || format == string(DiffFormatSplit) {
+			model.DiffFormat = DiffFormat(format)
 			updateView(model)
 		}
 		return model, nil

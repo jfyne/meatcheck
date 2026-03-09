@@ -10,6 +10,7 @@ type Comment struct {
 	Path      string `json:"path"`
 	StartLine int    `json:"start_line"`
 	EndLine   int    `json:"end_line"`
+	Side      string `json:"side,omitempty"`
 	Text      string `json:"text"`
 }
 
@@ -70,6 +71,13 @@ const (
 	ModeDiff ViewMode = "diff"
 )
 
+type DiffFormat string
+
+const (
+	DiffFormatUnified DiffFormat = "unified"
+	DiffFormatSplit   DiffFormat = "split"
+)
+
 type ViewDiffLine struct {
 	Kind      DiffLineKind
 	OldLine   int
@@ -89,6 +97,27 @@ type ViewDiffHunk struct {
 type ViewDiffFile struct {
 	Path  string
 	Hunks []ViewDiffHunk
+}
+
+type ViewDiffSide struct {
+	Line      int
+	Kind      DiffLineKind
+	Text      string
+	HTML      template.HTML
+	Empty     bool
+	Selected  bool
+	Commented bool
+	Comments  []ViewComment
+}
+
+type ViewDiffRow struct {
+	Left  ViewDiffSide
+	Right ViewDiffSide
+}
+
+type ViewDiffSplitHunk struct {
+	Header string
+	Rows   []ViewDiffRow
 }
 
 type ViewComment struct {
@@ -120,6 +149,7 @@ type ReviewModel struct {
 	PromptHTML           template.HTML
 	SelectionStart       int
 	SelectionEnd         int
+	SelectionSide        string
 	CommentDraft         string
 	Comments             []Comment
 	NextCommentID        int
@@ -128,7 +158,27 @@ type ReviewModel struct {
 	MarkdownRenderByPath map[string]bool
 	ViewFile             ViewFile
 	ViewDiff             ViewDiffFile
+	ViewDiffSplit        []ViewDiffSplitHunk
+	DiffFormat           DiffFormat
 	Error                string
+}
+
+// diffOldLineExists reports whether the given old-side line number exists in
+// the diff hunks for the specified file path. Add lines are excluded because
+// they have no old-side representation.
+func diffOldLineExists(files []DiffFile, path string, oldLine int) bool {
+	file := findDiffFile(files, path)
+	if file == nil {
+		return false
+	}
+	for _, h := range file.Hunks {
+		for _, dl := range h.Lines {
+			if dl.OldLine == oldLine && dl.Kind != DiffAdd {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type ReviewServer struct {

@@ -61,7 +61,7 @@ func TestProjectLineCommentsEditing(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, viewComments := projectLineComments("a.go", 5, comments, tc.editingID)
+			_, viewComments := projectLineComments("a.go", 5, comments, tc.editingID, "")
 			if len(viewComments) != 2 {
 				t.Fatalf("expected 2 view comments, got %d", len(viewComments))
 			}
