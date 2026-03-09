@@ -795,9 +795,13 @@ textarea {
   border-bottom: 1px solid var(--border);
 }
 
+.diff-inner {
+  display: block;
+}
+
 .diff-line {
   display: grid;
-  grid-template-columns: 4ch 4ch 1ch max-content;
+  grid-template-columns: 4ch 4ch 1ch 1fr;
   gap: 12px;
   padding: 0 20px;
   align-items: baseline;
@@ -826,11 +830,11 @@ textarea {
 }
 
 .diff-line[data-kind="add"] {
-  background: rgba(46, 160, 67, 0.12);
+  background: rgba(46, 160, 67, 0.25);
 }
 
 .diff-line[data-kind="del"] {
-  background: rgba(248, 81, 73, 0.16);
+  background: rgba(248, 81, 73, 0.25);
 }
 
 .diff-sign.add {
@@ -851,7 +855,9 @@ textarea {
 }
 
 .diff-line .code-text {
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  min-width: 0;
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
   letter-spacing: 0;
   word-spacing: 0;
@@ -860,10 +866,15 @@ textarea {
 
 .diff-line .code-text * {
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
   letter-spacing: 0;
   word-spacing: 0;
   font-variant-ligatures: none;
+}
+
+.chroma {
+  background-color: transparent !important;
 }
 
 .diff-line:hover {
@@ -909,22 +920,23 @@ textarea {
 
 /* Side-by-side diff layout */
 .diff-split {
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .diff-row-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-width: max-content;
 }
 
 .diff-cell {
   display: grid;
-  grid-template-columns: 4ch 1ch max-content;
+  grid-template-columns: 4ch 1ch 1fr;
   gap: 12px;
   padding: 0 12px;
   align-items: baseline;
   cursor: pointer;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .diff-cell.empty {
@@ -932,11 +944,11 @@ textarea {
 }
 
 .diff-cell[data-kind="add"] {
-  background: rgba(46, 160, 67, 0.12);
+  background: rgba(46, 160, 67, 0.25);
 }
 
 .diff-cell[data-kind="del"] {
-  background: rgba(248, 81, 73, 0.16);
+  background: rgba(248, 81, 73, 0.25);
 }
 
 .diff-cell:hover:not(.empty) {
@@ -979,7 +991,9 @@ textarea {
 }
 
 .diff-cell .code-text {
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  min-width: 0;
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
   letter-spacing: 0;
   word-spacing: 0;
@@ -988,7 +1002,8 @@ textarea {
 
 .diff-cell .code-text * {
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
   letter-spacing: 0;
   word-spacing: 0;
   font-variant-ligatures: none;

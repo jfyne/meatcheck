@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/coder/websocket v1.8.14 // indirect
 	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect

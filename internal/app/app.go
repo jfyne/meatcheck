@@ -84,7 +84,8 @@ func Run(ctx context.Context, cfg Config) error {
 		SelectedPath:         "",
 		SelectedLabel:        "",
 		Mode:                 mode,
-		DiffFormat:           DiffFormatUnified,
+		DiffFormat:           preferredDiffFormat(),
+		SidebarWidth:         loadPreferences().SidebarWidth,
 		RenderFile:           true,
 		RenderComments:       true,
 		Prompt:               cfg.Prompt,
@@ -439,16 +440,17 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 		model.SelectionStart = 0
 		model.SelectionEnd = 0
 		model.SelectionSide = ""
+		savePreference(func(p *Preferences) { p.DiffFormat = model.DiffFormat })
 		updateView(model)
 		return model, nil
 	})
 
-	h.HandleEvent("init-diff-format", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
+	h.HandleEvent("save-sidebar-width", func(ctx context.Context, s *live.Socket, p live.Params) (any, error) {
 		model := getModel(s, rs.Model)
-		format := p.String("format")
-		if format == string(DiffFormatUnified) || format == string(DiffFormatSplit) {
-			model.DiffFormat = DiffFormat(format)
-			updateView(model)
+		w := p.String("width")
+		if w != "" {
+			model.SidebarWidth = w
+			savePreference(func(p *Preferences) { p.SidebarWidth = w })
 		}
 		return model, nil
 	})

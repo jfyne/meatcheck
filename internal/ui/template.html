@@ -62,6 +62,14 @@
             </div>
           {{end}}
           <div class="header-actions">
+          {{if eq .Mode "diff"}}
+          <button class="icon-btn{{if eq .DiffFormat "split"}} active{{end}}" live-click="toggle-diff-format" title="Toggle side-by-side view" aria-label="Toggle side-by-side view">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="2" y="3" width="8" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="14" y="3" width="8" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </button>
+          {{end}}
           <button class="icon-btn {{if and (eq .Mode "file") .ViewFile.MarkdownFile}}{{if .ViewFile.MarkdownRendered}}active{{end}}{{else}}{{if .RenderFile}}active{{end}}{{end}}" live-click="toggle-file-render" title="{{if and (eq .Mode "file") .ViewFile.MarkdownFile}}Toggle markdown preview{{else}}Toggle file rendering{{end}}" aria-label="{{if and (eq .Mode "file") .ViewFile.MarkdownFile}}Toggle markdown preview{{else}}Toggle file rendering{{end}}">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M6 3h8l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -80,7 +88,7 @@
         </div>
     </header>
 
-    <div class="workspace{{if .SidebarCollapsed}} sidebar-collapsed{{end}}">
+    <div class="workspace{{if .SidebarCollapsed}} sidebar-collapsed{{end}}"{{if .SidebarWidth}} style="--sidebar-width: {{.SidebarWidth}}"{{end}}>
       <aside class="sidebar">
         <button class="sidebar-toggle-btn" live-click="toggle-sidebar" title="{{if .SidebarCollapsed}}Expand sidebar{{else}}Collapse sidebar{{end}}" aria-label="{{if .SidebarCollapsed}}Expand sidebar{{else}}Collapse sidebar{{end}}">
           {{if .SidebarCollapsed}}&#9654;{{else}}&#9664;{{end}}
@@ -110,14 +118,6 @@
       <section class="main">
         <div class="column-header">
           <div class="path">{{.SelectedLabel}}</div>
-          {{if eq $root.Mode "diff"}}
-          <button class="icon-btn{{if eq $root.DiffFormat "split"}} active{{end}}" live-click="toggle-diff-format" title="Toggle side-by-side view" aria-label="Toggle side-by-side view">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <rect x="2" y="3" width="8" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
-              <rect x="14" y="3" width="8" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-          </button>
-          {{end}}
           <button class="btn btn-sm{{if (index $root.Viewed $root.SelectedPath)}} secondary{{end}}" live-click="mark-viewed">
             {{if (index $root.Viewed $root.SelectedPath)}}Viewed &#10003;{{else}}Mark Viewed{{end}}
           </button>
@@ -126,6 +126,7 @@
           {{if eq $root.Mode "diff"}}
   {{if eq $root.DiffFormat "split"}}
   <div class="diff diff-split" id="code-view-{{.CodeViewKey}}">
+    <div class="diff-inner">
     {{range .ViewDiffSplit}}
       <div class="hunk-header">{{.Header}}</div>
       {{range .Rows}}
@@ -178,9 +179,11 @@
         {{end}}
       {{end}}
     {{end}}
+    </div>
   </div>
   {{else}}
   <div class="diff" id="code-view-{{.CodeViewKey}}">
+    <div class="diff-inner">
     {{range .ViewDiff.Hunks}}
       <div class="hunk-header">{{.Header}}</div>
       {{range .Lines}}
@@ -212,6 +215,7 @@
         {{end}}
       {{end}}
     {{end}}
+    </div>
   </div>
   {{end}}
 {{else}}
@@ -284,29 +288,6 @@
       mounted: function () {
         const root = this.el;
 
-        // Restore sidebar width from localStorage
-        (function () {
-          var saved = null;
-          try { saved = localStorage.getItem("meatcheck-sidebar-width"); } catch (e) {}
-          if (saved) {
-            document.documentElement.style.setProperty("--sidebar-width", saved);
-          }
-        })();
-
-        // Restore diff format from localStorage
-        (function () {
-          var saved = null;
-          try { saved = localStorage.getItem("meatcheck-diff-format"); } catch (e) {}
-          if (saved) {
-            var poll = setInterval(function () {
-              if (window.Live && typeof window.Live.send === "function") {
-                clearInterval(poll);
-                window.Live.send("init-diff-format", { format: saved });
-              }
-            }, 50);
-          }
-        })();
-
         // Drag-to-resize sidebar
         (function () {
           var handle = root.querySelector(".sidebar-resize-handle");
@@ -330,14 +311,18 @@
             var delta = ev.clientX - startX;
             var newWidth = Math.max(140, Math.min(600, startWidth + delta));
             var val = newWidth + "px";
-            document.documentElement.style.setProperty("--sidebar-width", val);
-            try { localStorage.setItem("meatcheck-sidebar-width", val); } catch (e) {}
+            root.querySelector(".workspace").style.setProperty("--sidebar-width", val);
           });
           document.addEventListener("mouseup", function () {
             if (!dragging) return;
             dragging = false;
             document.body.style.cursor = "";
             document.body.style.userSelect = "";
+            var sidebar = root.querySelector(".sidebar");
+            if (sidebar && window.Live && typeof window.Live.send === "function") {
+              var w = Math.round(sidebar.getBoundingClientRect().width) + "px";
+              window.Live.send("save-sidebar-width", { width: w });
+            }
           });
         })();
 
@@ -393,16 +378,6 @@
           if (action && id && window.Live && typeof window.Live.send === "function") {
             window.Live.send(action, { id: id });
           }
-        });
-        // Persist diff format to localStorage on toggle
-        root.addEventListener("click", (ev) => {
-          const target = ev.target;
-          if (!target || !(target instanceof Element)) return;
-          var btn = target.closest("[live-click]");
-          if (!btn || btn.getAttribute("live-click") !== "toggle-diff-format") return;
-          var isCurrentlySplit = !!root.querySelector('.diff-split');
-          var newFormat = isCurrentlySplit ? "unified" : "split";
-          try { localStorage.setItem("meatcheck-diff-format", newFormat); } catch (e) {}
         });
         root.addEventListener("keydown", (ev) => {
           const target = ev.target;
