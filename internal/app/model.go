@@ -160,6 +160,7 @@ type ReviewModel struct {
 	ViewDiff             ViewDiffFile
 	ViewDiffSplit        []ViewDiffSplitHunk
 	DiffFormat           DiffFormat
+	SidebarWidth         string
 	Error                string
 }
 
