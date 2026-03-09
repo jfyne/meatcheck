@@ -11,8 +11,8 @@ import (
 // Scenario: Toggle between unified and side-by-side diff view (unified path)
 func TestUpdateDiffViewUnifiedFormat(t *testing.T) {
 	model := &ReviewModel{
-		Mode:       ModeDiff,
-		DiffFormat: DiffFormatUnified,
+		Mode:         ModeDiff,
+		DiffFormat:   DiffFormatUnified,
 		SelectedPath: "a.go",
 		DiffFiles: []DiffFile{{
 			Path: "a.go",
@@ -56,8 +56,8 @@ func TestUpdateDiffViewUnifiedFormat(t *testing.T) {
 // Scenario: Toggle between unified and side-by-side diff view (split path)
 func TestUpdateDiffViewSplitFormat(t *testing.T) {
 	model := &ReviewModel{
-		Mode:       ModeDiff,
-		DiffFormat: DiffFormatSplit,
+		Mode:         ModeDiff,
+		DiffFormat:   DiffFormatSplit,
 		SelectedPath: "b.go",
 		DiffFiles: []DiffFile{{
 			Path: "b.go",

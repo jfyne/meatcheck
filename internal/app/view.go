@@ -130,7 +130,7 @@ func buildViewDiffSplit(file *DiffFile, comments []Comment, start, end int, rend
 
 				// Zip dels and adds 1:1.
 				maxLen := max(len(dels), len(adds))
-				for j := 0; j < maxLen; j++ {
+				for j := range maxLen {
 					row := ViewDiffRow{}
 					if j < len(dels) {
 						idx := dels[j]
