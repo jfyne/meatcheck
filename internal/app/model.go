@@ -161,7 +161,18 @@ type ReviewModel struct {
 	ViewDiffSplit        []ViewDiffSplitHunk
 	DiffFormat           DiffFormat
 	SidebarWidth         string
+	Git                  *GitContext
 	Error                string
+}
+
+// GitContext holds git repository information detected at startup.
+// A nil pointer means git context is unavailable (non-git directory or git not installed).
+type GitContext struct {
+	WorkDir      string
+	Branch       string
+	RepoRoot     string
+	IsWorktree   bool
+	MainWorktree string
 }
 
 // diffOldLineExists reports whether the given old-side line number exists in

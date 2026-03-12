@@ -378,6 +378,110 @@ func TestMarkdownLinkTextDecoration(t *testing.T) {
 	}
 }
 
+// buildGitModel returns a ReviewModel with a GitContext set, suitable for
+// testing git-context-aware rendering. Callers may mutate before rendering.
+func buildGitModel(git *GitContext) *ReviewModel {
+	m := &ReviewModel{
+		Files:                []File{{Path: "a.go", PathSlash: "a.go", Lines: []string{"x"}}},
+		SelectedPath:         "a.go",
+		Mode:                 ModeFile,
+		RenderFile:           true,
+		RenderComments:       true,
+		Viewed:               make(map[string]bool),
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+		Git:                  git,
+	}
+	m.Tree = buildTree(m.Files, m.SelectedPath, nil, nil)
+	return m
+}
+
+// TestRenderTitleWithGitContext verifies that when GitContext is set the page
+// title includes the branch name and working directory.
+//
+// Scenario 1: Branch and directory shown in title for git repo
+func TestRenderTitleWithGitContext(t *testing.T) {
+	model := buildGitModel(&GitContext{
+		Branch:  "feature-xyz",
+		WorkDir: "/test/dir",
+	})
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, "Meatcheck - feature-xyz") {
+		t.Errorf("expected title to contain \"Meatcheck - feature-xyz\" when GitContext is set, got: %q", html)
+	}
+	if !strings.Contains(html, "/test/dir") {
+		t.Errorf("expected title to contain working directory \"/test/dir\" when GitContext is set, got: %q", html)
+	}
+}
+
+// TestRenderTitleWithoutGitContext verifies that when Git is nil the title
+// falls back to a plain "Meatcheck" title element with no extra content.
+//
+// Scenario 6: Title fallback when GitContext is nil
+func TestRenderTitleWithoutGitContext(t *testing.T) {
+	model := buildGitModel(nil)
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, "<title>Meatcheck</title>") {
+		t.Errorf("expected exact <title>Meatcheck</title> when Git is nil, got: %q", html)
+	}
+}
+
+// TestRenderContextBarWithBranch verifies that when GitContext is set the
+// rendered HTML includes a header-context element containing the branch name
+// and working directory.
+//
+// Scenario 2: Context bar shows branch and directory
+func TestRenderContextBarWithBranch(t *testing.T) {
+	model := buildGitModel(&GitContext{
+		Branch:  "main",
+		WorkDir: "/home/user/project",
+	})
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, "header-context") {
+		t.Errorf("expected \"header-context\" class in rendered HTML when GitContext is set, got: %q", html)
+	}
+	if !strings.Contains(html, `<span class="ctx-value">main</span>`) {
+		t.Errorf("expected branch name in ctx-value span in rendered HTML, got: %q", html)
+	}
+	if !strings.Contains(html, "/home/user/project") {
+		t.Errorf("expected working directory \"/home/user/project\" in rendered HTML when GitContext is set, got: %q", html)
+	}
+}
+
+// TestRenderContextBarAbsentWithoutGit verifies that when Git is nil the
+// rendered HTML does not include a header-context element.
+// Note: checks for class="header-context" (the HTML element attribute) rather
+// than the bare string "header-context", because the CSS rule .header-context
+// is always present in the inlined stylesheet regardless of git context.
+//
+// Scenario 4: No context bar for non-git directory
+func TestRenderContextBarAbsentWithoutGit(t *testing.T) {
+	model := buildGitModel(nil)
+
+	html := renderReviewHTML(t, model)
+
+	if strings.Contains(html, `class="header-context"`) {
+		t.Errorf("expected no \"header-context\" element when Git is nil, got: %q", html)
+	}
+}
+
+// TestRenderHeaderContextCSS verifies that the rendered page CSS contains a
+// .header-context rule.
+//
+// CSS presence test for .header-context
+func TestRenderHeaderContextCSS(t *testing.T) {
+	html := renderReviewHTML(t, buildMinimalModel())
+	if !strings.Contains(html, ".header-context") {
+		t.Fatalf("expected .header-context rule in rendered CSS, got no match")
+	}
+}
+
 func renderReviewHTML(t *testing.T, model *ReviewModel) string {
 	t.Helper()
 

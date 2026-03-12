@@ -180,6 +180,35 @@ body {
   padding: 14px 24px;
 }
 
+.header-context {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 6px 24px;
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+
+.ctx-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ctx-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.ctx-value {
+  font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
+  font-size: 12px;
+}
+
 .header-avatar {
   width: 56px;
   height: 56px;

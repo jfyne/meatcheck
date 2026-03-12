@@ -39,7 +39,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Meatcheck</title>
+  <title>Meatcheck{{with .Assigns.Git}}{{if .Branch}} - {{.Branch}}{{end}}{{if .WorkDir}} {{.WorkDir}}{{end}}{{end}}</title>
   <link rel="icon" type="image/png" href="{{.Logo}}" />
   <style>
     {{.CSS}}
@@ -86,6 +86,12 @@
           <button class="btn" live-click="finish">Finish</button>
         </div>
         </div>
+        {{with $root.Git}}
+        <div class="header-context">
+          {{if .Branch}}<span class="ctx-item"><span class="ctx-label">branch</span> <span class="ctx-value">{{.Branch}}</span></span>{{end}}
+          {{if .WorkDir}}<span class="ctx-item"><span class="ctx-label">dir</span> <span class="ctx-value">{{.WorkDir}}</span></span>{{end}}
+        </div>
+        {{end}}
     </header>
 
     <div class="workspace{{if .SidebarCollapsed}} sidebar-collapsed{{end}}"{{if .SidebarWidth}} style="--sidebar-width: {{.SidebarWidth}}"{{end}}>

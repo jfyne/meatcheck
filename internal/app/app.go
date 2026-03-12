@@ -42,6 +42,8 @@ Flags:
 }
 
 func Run(ctx context.Context, cfg Config) error {
+	gitCtx := detectGitContext()
+
 	diffInput := strings.TrimSpace(cfg.StdDiff)
 	if cfg.Diff != "" {
 		data, err := os.ReadFile(cfg.Diff)
@@ -91,6 +93,7 @@ func Run(ctx context.Context, cfg Config) error {
 		Prompt:               cfg.Prompt,
 		Ranges:               cfg.Ranges,
 		MarkdownRenderByPath: make(map[string]bool),
+		Git:                  gitCtx,
 	}
 	if strings.TrimSpace(cfg.Prompt) != "" {
 		model.PromptHTML = renderMarkdown(cfg.Prompt)
@@ -135,9 +138,16 @@ func Run(ctx context.Context, cfg Config) error {
 
 	mux := http.NewServeMux()
 	mux.Handle("/live.js", live.Javascript{})
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
+	wd := ""
+	if gitCtx != nil {
+		wd = gitCtx.WorkDir
+	}
+	if wd == "" {
+		var err error
+		wd, err = os.Getwd()
+		if err != nil {
+			return err
+		}
 	}
 	mux.Handle("/file", localFileHandler(wd))
 	mux.Handle("/", live.NewHttpHandler(ctx, h))

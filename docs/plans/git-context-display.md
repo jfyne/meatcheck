@@ -80,12 +80,12 @@ Feature: Git context display in meatcheck UI
 
 ### Git Context Detection
 
-- [ ] Add `GitContext` struct and field to `ReviewModel` (`internal/app/model.go`) [Stage 1]
+- [x] Add `GitContext` struct and field to `ReviewModel` (`internal/app/model.go`) [Stage 1]
   - Files: `internal/app/model.go` (modifies)
   - Add a `GitContext` struct with fields: `WorkDir string`, `Branch string`, `RepoRoot string`, `IsWorktree bool`, `MainWorktree string`
   - Add a `Git *GitContext` field to `ReviewModel` (pointer so `{{with}}` guards work — nil means no git context)
 
-- [ ] Create `detectGitContext()` in new file (`internal/app/git.go`) [Stage 1]
+- [x] Create `detectGitContext()` in new file (`internal/app/git.go`) [Stage 1]
   - Files: `internal/app/git.go` (creates)
   - Function `detectGitContext() *GitContext` that:
     - Gets cwd via `os.Getwd()` -> `WorkDir`
@@ -97,13 +97,13 @@ Feature: Git context display in meatcheck UI
   - Graceful error handling: if git is not installed or any command fails, return nil
   - Follow `preferences.go` pattern for self-contained utility with graceful degradation
 
-- [ ] Write tests for `detectGitContext()` (`internal/app/git_test.go`) [Stage 1]
+- [x] Write tests for `detectGitContext()` (`internal/app/git_test.go`) [Stage 1]
   - Files: `internal/app/git_test.go` (creates)
   - Test that WorkDir, Branch, and RepoRoot are populated when run from a git repo
   - Test that `nil` is returned from a non-git temp directory
   - Test worktree detection by creating a real worktree in a temp git repo
 
-- [ ] Wire `detectGitContext()` into `app.Run()` (`internal/app/app.go`) [Stage 1]
+- [x] Wire `detectGitContext()` into `app.Run()` (`internal/app/app.go`) [Stage 1]
   - Files: `internal/app/app.go` (modifies)
   - Call `detectGitContext()` early in `Run()`
   - Set `Git: gitCtx` on the `ReviewModel`
@@ -111,7 +111,7 @@ Feature: Git context display in meatcheck UI
 
 ### UI Display
 
-- [ ] Update title, add context bar, and add CSS (`internal/ui/template.html`, `internal/ui/styles.css`) [Stage 2, depends: Stage 1]
+- [x] Update title, add context bar, and add CSS (`internal/ui/template.html`, `internal/ui/styles.css`) [Stage 2, depends: Stage 1]
   - Files: `internal/ui/template.html` (modifies), `internal/ui/styles.css` (modifies)
   - **Title**: Replace `<title>Meatcheck</title>` (line 42, outside `{{with .Assigns}}`) with:
     `<title>Meatcheck{{with .Assigns.Git}}{{if .Branch}} - {{.Branch}}{{end}}{{if .WorkDir}} {{.WorkDir}}{{end}}{{end}}</title>`
@@ -119,7 +119,7 @@ Feature: Git context display in meatcheck UI
   - **Context bar**: Insert `<div class="header-context">` between `.header-top` closing (line 88) and `</header>` (line 89), inside the `{{with .Assigns}}` scope. Guard with `{{with $root.Git}}` so it only renders when git context is available. Show branch, directory, and worktree items conditionally.
   - **CSS**: Add `.header-context` (flex, 12px, `var(--muted)`, border-top), `.ctx-item`, `.ctx-label` (uppercase, 10px), `.ctx-value` (monospace) after `.header-top` rules in styles.css.
 
-- [ ] Write render tests for title and context bar (`internal/app/http_render_test.go`) [Stage 2, depends: Stage 1]
+- [x] Write render tests for title and context bar (`internal/app/http_render_test.go`) [Stage 2, depends: Stage 1]
   - Files: `internal/app/http_render_test.go` (modifies)
   - Test title contains branch when GitContext is set (Scenario 1)
   - Test title is just "Meatcheck" when GitContext is nil (Scenario 6)
