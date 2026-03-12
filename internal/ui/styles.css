@@ -189,12 +189,15 @@ body {
   font-size: 12px;
   color: var(--muted);
   border-top: 1px solid var(--border);
+  overflow: hidden;
 }
 
 .ctx-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .ctx-label {
@@ -202,11 +205,15 @@ body {
   letter-spacing: 0.08em;
   font-size: 10px;
   opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .ctx-value {
   font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace;
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-avatar {
