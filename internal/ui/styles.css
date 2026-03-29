@@ -881,6 +881,16 @@ textarea {
   color: #f85149;
 }
 
+.intra-del {
+  background: rgba(248, 81, 73, 0.4);
+  border-radius: 2px;
+}
+
+.intra-add {
+  background: rgba(46, 160, 67, 0.4);
+  border-radius: 2px;
+}
+
 .diff-line.selected {
   background: var(--line-selected);
 }

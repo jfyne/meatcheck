@@ -158,6 +158,10 @@ func buildViewDiffSplit(file *DiffFile, comments []Comment, start, end int, rend
 					} else {
 						row.Right = ViewDiffSide{Empty: true}
 					}
+					// Apply intra-line word-level diff for paired del/add rows.
+					if j < len(dels) && j < len(adds) {
+						applyIntraLineDiff(&row.Left.HTML, &row.Right.HTML, lines[dels[j]].Text, lines[adds[j]].Text)
+					}
 					vh.Rows = append(vh.Rows, row)
 				}
 			}
@@ -289,6 +293,12 @@ func buildViewDiff(file *DiffFile, comments []Comment, start, end int, render bo
 				line.Comments = append(line.Comments, oldComments...)
 			}
 			vh.Lines = append(vh.Lines, line)
+		}
+		// Post-pass: apply intra-line word-level diff for adjacent del/add pairs.
+		for i := 0; i+1 < len(vh.Lines); i++ {
+			if vh.Lines[i].Kind == DiffDel && vh.Lines[i+1].Kind == DiffAdd {
+				applyIntraLineDiff(&vh.Lines[i].HTML, &vh.Lines[i+1].HTML, vh.Lines[i].Text, vh.Lines[i+1].Text)
+			}
 		}
 		view.Hunks = append(view.Hunks, vh)
 	}

@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -370,5 +371,100 @@ func TestBuildViewDiffSplitHunkHeader(t *testing.T) {
 	want := fmt.Sprintf("@@ -%d,%d +%d,%d @@", 10, 3, 12, 4)
 	if hunks[0].Header != want {
 		t.Errorf("hunk Header: got %q, want %q", hunks[0].Header, want)
+	}
+}
+
+// TestBuildViewDiffSplitIntraLineHTML verifies that paired del/add rows get
+// intra-line word-level diff HTML written into the .HTML field.
+func TestBuildViewDiffSplitIntraLineHTML(t *testing.T) {
+	df := &DiffFile{Path: "intra.go", Hunks: []DiffHunk{{
+		OldStart: 1,
+		OldCount: 1,
+		NewStart: 1,
+		NewCount: 1,
+		Lines: []DiffLine{
+			{Kind: DiffDel, OldLine: 1, NewLine: 0, Text: "return nil"},
+			{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "return err"},
+		},
+	}}}
+
+	hunks := buildViewDiffSplit(df, nil, 0, 0, false, 0, "")
+
+	if len(hunks) != 1 {
+		t.Fatalf("expected 1 hunk, got %d", len(hunks))
+	}
+	rows := hunks[0].Rows
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(rows))
+	}
+
+	r := rows[0]
+	if r.Left.HTML == "" {
+		t.Fatal("expected Left.HTML to be set with intra-line diff")
+	}
+	if r.Right.HTML == "" {
+		t.Fatal("expected Right.HTML to be set with intra-line diff")
+	}
+	if !strings.Contains(string(r.Left.HTML), "intra-del") {
+		t.Errorf("Left.HTML should contain intra-del, got: %s", r.Left.HTML)
+	}
+	if !strings.Contains(string(r.Right.HTML), "intra-add") {
+		t.Errorf("Right.HTML should contain intra-add, got: %s", r.Right.HTML)
+	}
+}
+
+// TestBuildViewDiffSplitIntraLineNotSetForUnpaired verifies that unpaired
+// del lines (no matching add) do not get intra-line HTML.
+func TestBuildViewDiffSplitIntraLineNotSetForUnpaired(t *testing.T) {
+	df := &DiffFile{Path: "unpair.go", Hunks: []DiffHunk{{
+		OldStart: 1,
+		OldCount: 2,
+		NewStart: 1,
+		NewCount: 1,
+		Lines: []DiffLine{
+			{Kind: DiffDel, OldLine: 1, NewLine: 0, Text: "return nil"},
+			{Kind: DiffDel, OldLine: 2, NewLine: 0, Text: "extra line"},
+			{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "return err"},
+		},
+	}}}
+
+	hunks := buildViewDiffSplit(df, nil, 0, 0, false, 0, "")
+
+	rows := hunks[0].Rows
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(rows))
+	}
+
+	// Row 0: paired — should have intra-line HTML.
+	if !strings.Contains(string(rows[0].Left.HTML), "intra-del") {
+		t.Errorf("row 0 Left.HTML should contain intra-del for paired line, got: %s", rows[0].Left.HTML)
+	}
+	// Row 1: unpaired del (empty right) — no intra-line HTML.
+	if strings.Contains(string(rows[1].Left.HTML), "intra-del") {
+		t.Errorf("row 1 Left.HTML should NOT contain intra-del for unpaired line, got: %s", rows[1].Left.HTML)
+	}
+}
+
+// TestBuildViewDiffSplitIntraLineContextLines verifies that context lines
+// never receive intra-line highlighting.
+func TestBuildViewDiffSplitIntraLineContextLines(t *testing.T) {
+	df := &DiffFile{Path: "ctx.go", Hunks: []DiffHunk{{
+		OldStart: 1,
+		OldCount: 1,
+		NewStart: 1,
+		NewCount: 1,
+		Lines: []DiffLine{
+			{Kind: DiffContext, OldLine: 1, NewLine: 1, Text: "unchanged line"},
+		},
+	}}}
+
+	hunks := buildViewDiffSplit(df, nil, 0, 0, false, 0, "")
+
+	rows := hunks[0].Rows
+	if strings.Contains(string(rows[0].Left.HTML), "intra-") {
+		t.Errorf("context Left.HTML should not contain intra- spans, got: %s", rows[0].Left.HTML)
+	}
+	if strings.Contains(string(rows[0].Right.HTML), "intra-") {
+		t.Errorf("context Right.HTML should not contain intra- spans, got: %s", rows[0].Right.HTML)
 	}
 }
