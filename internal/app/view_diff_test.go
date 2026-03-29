@@ -1,6 +1,9 @@
 package app
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestBuildViewDiffCommentsNewLinesOnly(t *testing.T) {
 	df := &DiffFile{Path: "x.go", Hunks: []DiffHunk{{
@@ -190,5 +193,67 @@ func TestBuildViewDiffDeletedLinesSelectable(t *testing.T) {
 	}
 	if !lines2[0].Selected {
 		t.Errorf("case 2: del line (OldLine=10) should be Selected when selectionSide='old' and range=[10,10]")
+	}
+}
+
+// TestBuildViewDiffIntraLineUnified verifies that adjacent del/add pairs in
+// unified view get intra-line word-level diff HTML.
+func TestBuildViewDiffIntraLineUnified(t *testing.T) {
+	df := &DiffFile{Path: "intra.go", Hunks: []DiffHunk{{
+		OldStart: 1,
+		OldCount: 1,
+		NewStart: 1,
+		NewCount: 1,
+		Lines: []DiffLine{
+			{Kind: DiffDel, OldLine: 1, NewLine: 0, Text: "return nil"},
+			{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "return err"},
+		},
+	}}}
+
+	view := buildViewDiff(df, nil, 0, 0, false, 0, "")
+
+	lines := view.Hunks[0].Lines
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d", len(lines))
+	}
+	if !strings.Contains(string(lines[0].HTML), "intra-del") {
+		t.Errorf("del line HTML should contain intra-del, got: %s", lines[0].HTML)
+	}
+	if !strings.Contains(string(lines[1].HTML), "intra-add") {
+		t.Errorf("add line HTML should contain intra-add, got: %s", lines[1].HTML)
+	}
+}
+
+// TestBuildViewDiffIntraLineUnifiedNonAdjacent verifies that a del line NOT
+// immediately followed by an add line does not get intra-line HTML.
+func TestBuildViewDiffIntraLineUnifiedNonAdjacent(t *testing.T) {
+	df := &DiffFile{Path: "nonadj.go", Hunks: []DiffHunk{{
+		OldStart: 1,
+		OldCount: 2,
+		NewStart: 1,
+		NewCount: 1,
+		Lines: []DiffLine{
+			{Kind: DiffDel, OldLine: 1, NewLine: 0, Text: "first deleted"},
+			{Kind: DiffDel, OldLine: 2, NewLine: 0, Text: "second deleted"},
+			{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "only add"},
+		},
+	}}}
+
+	view := buildViewDiff(df, nil, 0, 0, false, 0, "")
+
+	lines := view.Hunks[0].Lines
+	if len(lines) != 3 {
+		t.Fatalf("expected 3 lines, got %d", len(lines))
+	}
+	// First del is followed by another del, not an add — no intra-line.
+	if strings.Contains(string(lines[0].HTML), "intra-") {
+		t.Errorf("first del should NOT have intra-line HTML when followed by another del, got: %s", lines[0].HTML)
+	}
+	// Second del IS followed by an add — should get intra-line.
+	if !strings.Contains(string(lines[1].HTML), "intra-del") {
+		t.Errorf("second del (followed by add) should have intra-del, got: %s", lines[1].HTML)
+	}
+	if !strings.Contains(string(lines[2].HTML), "intra-add") {
+		t.Errorf("add line should have intra-add, got: %s", lines[2].HTML)
 	}
 }
