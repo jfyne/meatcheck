@@ -10,7 +10,7 @@ import (
 type wordEditKind int
 
 const (
-	wordEqual  wordEditKind = iota
+	wordEqual wordEditKind = iota
 	wordInsert
 	wordDelete
 )
