@@ -143,9 +143,7 @@
             <div class="diff-cell {{if .Left.Selected}}selected{{end}} {{if .Left.Commented}}commented{{end}}" data-old-line="{{.Left.Line}}" data-kind="{{.Left.Kind}}">
               <span class="ln">{{if gt .Left.Line 0}}{{.Left.Line}}{{end}}</span>
               <span class="diff-sign {{.Left.Kind}}">{{if eq .Left.Kind "add"}}+{{else if eq .Left.Kind "del"}}-{{else}} {{end}}</span>
-              <div class="code-text {{if $root.RenderFile}}chroma{{end}}">
-                {{if $root.RenderFile}}{{.Left.HTML}}{{else}}{{.Left.Text}}{{end}}
-              </div>
+              <div class="code-text {{if $root.RenderFile}}chroma{{end}}">{{- if $root.RenderFile}}{{.Left.HTML}}{{else}}{{.Left.Text}}{{end -}}</div>
             </div>
           {{end}}
           {{if .Right.Empty}}
@@ -154,9 +152,7 @@
             <div class="diff-cell {{if .Right.Selected}}selected{{end}} {{if .Right.Commented}}commented{{end}}" data-line="{{.Right.Line}}" data-kind="{{.Right.Kind}}">
               <span class="ln">{{if gt .Right.Line 0}}{{.Right.Line}}{{end}}</span>
               <span class="diff-sign {{.Right.Kind}}">{{if eq .Right.Kind "add"}}+{{else if eq .Right.Kind "del"}}-{{else}} {{end}}</span>
-              <div class="code-text {{if $root.RenderFile}}chroma{{end}}">
-                {{if $root.RenderFile}}{{.Right.HTML}}{{else}}{{.Right.Text}}{{end}}
-              </div>
+              <div class="code-text {{if $root.RenderFile}}chroma{{end}}">{{- if $root.RenderFile}}{{.Right.HTML}}{{else}}{{.Right.Text}}{{end -}}</div>
             </div>
           {{end}}
         </div>
@@ -197,9 +193,7 @@
           <span class="ln old">{{if gt .OldLine 0}}{{.OldLine}}{{end}}</span>
           <span class="ln new" data-line="{{.NewLine}}">{{if gt .NewLine 0}}{{.NewLine}}{{end}}</span>
           <span class="diff-sign {{.Kind}}">{{if eq .Kind "add"}}+{{else if eq .Kind "del"}}-{{else}} {{end}}</span>
-          <div class="code-text {{if $root.RenderFile}}chroma{{end}}">
-            {{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}
-          </div>
+          <div class="code-text {{if $root.RenderFile}}chroma{{end}}">{{- if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end -}}</div>
         </div>
         {{if .Comments}}
           <div class="line-comment-thread">
@@ -257,7 +251,7 @@
       <div class="line-block" id="line-{{id $root.SelectedPath}}-{{.Number}}">
         <div class="line {{if .Selected}}selected{{end}} {{if .Commented}}commented{{end}}" data-line="{{.Number}}">
           <span class="ln" data-line="{{.Number}}">{{.Number}}</span>
-          <div class="code-text">{{if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end}}</div>
+          <div class="code-text">{{- if $root.RenderFile}}{{.HTML}}{{else}}{{.Text}}{{end -}}</div>
         </div>
         {{if .Comments}}
           <div class="line-comment-thread">
