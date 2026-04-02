@@ -102,12 +102,12 @@ Feature: Per-list-item commenting in markdown review
 
 ### Backend: Model and Rendering
 
-- [ ] **T1**: Add `ListOpen` and `ListClose` fields to `MarkdownBlock` struct (`internal/app/model.go`) [Stage 1]
+- [x] **T1**: Add `ListOpen` and `ListClose` fields to `MarkdownBlock` struct (`internal/app/model.go`) [Stage 1]
   - Files: `internal/app/model.go` (modifies)
   - Add `ListOpen template.HTML` and `ListClose template.HTML` to the `MarkdownBlock` struct. `ListOpen` holds the opening list tag (e.g., `<ul>`, `<ol>`, `<ol start="3">`). `ListClose` holds the closing tag (`</ul>` or `</ol>`). For non-list blocks, both are zero-value empty strings. For the first item in a list, `ListOpen` is set. For the last item, `ListClose` is set. A single-item list has both on the same block.
   - Must be `template.HTML` (not `string`) so Go's `html/template` does not escape the angle brackets.
 
-- [ ] **T2**: Modify `renderMarkdownBlocks()` to split `ast.List` into per-item blocks (`internal/app/assets.go`) [Stage 1, depends: T1]
+- [x] **T2**: Modify `renderMarkdownBlocks()` to split `ast.List` into per-item blocks (`internal/app/assets.go`) [Stage 1, depends: T1]
   - Files: `internal/app/assets.go` (modifies)
   - In the main loop (line 163), add a type-switch on `child`. When `child` is `*ast.List`:
     1. Build the opening tag: `<ul>` for unordered, `<ol>` for ordered (with `start="N"` if `list.IsOrdered() && list.Start != 1`; omit `start` attribute when `Start == 1` as it is the default).
@@ -120,14 +120,14 @@ Feature: Per-list-item commenting in markdown review
 
 ### Frontend: Template and CSS
 
-- [ ] **T3**: Emit list wrapper tags in the template (`internal/ui/template.html`) [Stage 1, depends: T1]
+- [x] **T3**: Emit list wrapper tags in the template (`internal/ui/template.html`) [Stage 1, depends: T1]
   - Files: `internal/ui/template.html` (modifies)
   - In the `{{range .ViewFile.MarkdownBlocks}}` loop (lines 224-246):
     - Before `<div class="md-block ...">`: emit `{{if .ListOpen}}{{.ListOpen}}{{end}}`
     - After the closing `</div>` of the md-block: emit `{{if .ListClose}}{{.ListClose}}{{end}}`
   - Result: consecutive list-item `.md-block` divs are wrapped in `<ul>` or `<ol>`.
 
-- [ ] **T4**: Add CSS for list-item blocks inside list wrappers (`internal/ui/styles.css`) [Stage 1, depends: T3]
+- [x] **T4**: Add CSS for list-item blocks inside list wrappers (`internal/ui/styles.css`) [Stage 1, depends: T3]
   - Files: `internal/ui/styles.css` (modifies)
   - Add rules after the existing `.md-block` rules (~line 360):
     - `.markdown-file-preview > ul, .markdown-file-preview > ol`: Reset margin/padding on the wrapper (`margin: 0; padding: 0; list-style: none;`).
@@ -137,7 +137,7 @@ Feature: Per-list-item commenting in markdown review
 
 ### Tests
 
-- [ ] **T5**: Write all tests for per-list-item block splitting (`internal/app/markdown_test.go`) [Stage 1]
+- [x] **T5**: Write all tests for per-list-item block splitting (`internal/app/markdown_test.go`) [Stage 1]
   - Files: `internal/app/markdown_test.go` (modifies)
   - Update `TestRenderMarkdownBlocksLineNumbers`: the 2-item list at lines 6-7 now produces 2 blocks (total 4). Assert `blocks[2]`: StartLine=6, HTML contains `item 1`, `ListOpen` contains `<ul`. Assert `blocks[3]`: StartLine=7, HTML contains `item 2`, `ListClose` contains `</ul>`.
   - Add `TestRenderMarkdownBlocksOrderedListWrapper`: Ordered list with `start="5"`, verifies `<ol start="5">` in `ListOpen`. Also test ordered list starting at 1 has `ListOpen == "<ol>"` without `start` attribute.

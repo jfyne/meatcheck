@@ -359,6 +359,43 @@ body {
   border-top: 1px dashed var(--border);
 }
 
+.markdown-file-preview > ul,
+.markdown-file-preview > ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.markdown-file-preview > ul > .md-block,
+.markdown-file-preview > ol > .md-block {
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+.markdown-file-preview > ul > .md-block .md-block-content,
+.markdown-file-preview > ol > .md-block .md-block-content {
+  padding-left: 2em;
+}
+
+.markdown-file-preview > ul > .md-block .md-block-content li {
+  display: list-item;
+  list-style-type: disc;
+}
+
+.markdown-file-preview > ol {
+  counter-reset: md-li-counter 0; /* default; overridden by inline style on the <ol> */
+}
+
+.markdown-file-preview > ol > .md-block .md-block-content li {
+  display: list-item;
+  list-style: none;
+  counter-increment: md-li-counter;
+}
+
+.markdown-file-preview > ol > .md-block .md-block-content li::marker {
+  content: counter(md-li-counter) ". ";
+}
+
 .code {
   background: var(--panel);
   border: 1px solid var(--border);
