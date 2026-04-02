@@ -8,6 +8,13 @@
 - When the application starts outside a git repository, the system shall not display a context bar
 - The HTML `<title>` shall include branch name and directory when in a git repo, and be just "Meatcheck" otherwise
 - If git is not installed or detection fails, the system shall degrade gracefully (no context bar, plain title)
+- When a user clicks on a list item in rendered markdown view, the system shall select only that item's line range (not the entire list)
+- When a user submits a comment while a single list item is selected, the system shall anchor the comment to that item's StartLine and EndLine
+- When a rendered markdown file contains a list, the system shall display each list item as an independently clickable and commentable block
+- When a list item has a comment, the system shall display the comment thread directly below that item (not after the entire list)
+- While rendering per-item blocks, the system shall wrap consecutive list-item blocks in the correct `<ul>` or `<ol>` HTML tag for proper list styling
+- If an ordered list starts at a number other than 1, the system shall include the `start` attribute on the `<ol>` tag
+- When rendering GFM task list items as individual blocks, the system shall correctly display checkboxes
 
 ## Acceptance Criteria
 
@@ -55,11 +62,67 @@ Feature: Git context display in meatcheck UI
     Then the context bar shows branch "HEAD"
 ~~~
 
+~~~gherkin
+Feature: Per-list-item commenting in markdown review
+
+  Scenario: Click selects individual list item
+    Given a markdown file with a 3-item unordered list on lines 5-7
+    When the user clicks on the second list item
+    Then only line 6 is selected
+    And the first and third items are not selected
+
+  Scenario: Comment anchors to single list item
+    Given a markdown file with a 3-item list
+    And the user has selected the second item (line 6)
+    When the user submits a comment "Fix this item"
+    Then the comment is created with StartLine=6 and EndLine=6
+    And the comment thread appears below the second item only
+
+  Scenario: Ordered list preserves numbering
+    Given a markdown file with an ordered list starting at 3
+    When the file is rendered in markdown preview mode
+    Then the list items are numbered starting from 3
+    And each item is independently clickable
+
+  Scenario: GFM task list checkboxes render correctly
+    Given a markdown file containing "- [ ] todo" and "- [x] done"
+    When the file is rendered in markdown preview mode
+    Then each task item shows its checkbox (unchecked or checked)
+    And each task item is independently commentable
+
+  Scenario: Nested lists stay within parent item
+    Given a markdown file with a list item containing a nested sub-list
+    When the file is rendered in markdown preview mode
+    Then the parent item's block includes the nested list HTML
+    And the nested items are not split into separate commentable blocks
+
+  Scenario: Non-list blocks are unaffected
+    Given a markdown file with headings, paragraphs, and blockquotes
+    When the file is rendered in markdown preview mode
+    Then these blocks render exactly as before
+    And they carry no list wrapper metadata
+
+  Scenario: Shift-click selects range across list items
+    Given a markdown file with a 3-item list
+    And the user has clicked item 1 (line 5)
+    When the user shift-clicks item 3 (line 7)
+    Then lines 5-7 are selected (spanning all three items)
+
+  Scenario: Legacy comment on full list range displays correctly
+    Given a comment anchored to lines 5-7 (the full list range)
+    And the list is now rendered as 3 per-item blocks
+    Then all three items show the "commented" visual indicator
+    And the comment text displays below the first item
+~~~
+
 ## Key Files
 
-- `internal/app/model.go` - GitContext struct definition, ReviewModel field
+- `internal/app/model.go` - GitContext struct definition, ReviewModel field, MarkdownBlock struct
 - `internal/app/git.go` - Git detection logic
-- `internal/app/app.go` - Wiring detectGitContext into Run()
-- `internal/ui/template.html` - Title and header context bar
-- `internal/ui/styles.css` - Context bar styling
+- `internal/app/app.go` - Wiring detectGitContext into Run(), event handlers
+- `internal/app/assets.go` - renderMarkdownBlocks(), nodeByteRange()
+- `internal/app/view.go` - projectBlockComments(), updateFileView()
+- `internal/ui/template.html` - Title, header context bar, markdown block rendering
+- `internal/ui/styles.css` - Context bar styling, md-block styling
+- `internal/app/markdown_test.go` - Markdown block rendering tests
 - `internal/app/http_render_test.go` - Render tests for title and context bar
