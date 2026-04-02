@@ -54,6 +54,8 @@ type MarkdownBlock struct {
 	Selected  bool
 	Commented bool
 	Comments  []ViewComment
+	ListOpen  template.HTML
+	ListClose template.HTML
 }
 
 type ViewFile struct {

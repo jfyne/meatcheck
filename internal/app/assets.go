@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"html"
 	"html/template"
 	"net/url"
@@ -111,6 +112,25 @@ func renderMarkdownDocument(path string, input string) template.HTML {
 	return rewriteMarkdownImageSources(string(rendered), baseDir)
 }
 
+// resolveLineRange converts a node's byte range into 1-based start/end line
+// numbers. If the node has no byte range, startLine defaults to lastLine+1.
+// endLine is always >= startLine.
+func resolveLineRange(node ast.Node, lastLine int, byteToLine func(int) int) (startLine, endLine int) {
+	startByte, endByte := nodeByteRange(node)
+	if startByte >= 0 {
+		startLine = byteToLine(startByte)
+	} else {
+		startLine = lastLine + 1
+	}
+	if endByte > 0 {
+		endLine = byteToLine(endByte - 1)
+	}
+	if endLine < startLine {
+		endLine = startLine
+	}
+	return startLine, endLine
+}
+
 // renderMarkdownBlocks parses markdown into per-block HTML chunks with source line mappings.
 func renderMarkdownBlocks(path, input string) []MarkdownBlock {
 	baseDir := filepath.Dir(path)
@@ -158,27 +178,60 @@ func renderMarkdownBlocks(path, input string) []MarkdownBlock {
 		})
 	}
 
-	// Render each top-level block.
+	// Render each top-level block. A single buffer is reused across iterations.
+	var buf bytes.Buffer
 	lastLine := fmLineCount
 	for child := doc.FirstChild(); child != nil; child = child.NextSibling() {
-		startByte, endByte := nodeByteRange(child)
+		if listNode, ok := child.(*ast.List); ok {
+			// Build wrapper tags.
+			var openTag, closeTag string
+			if listNode.IsOrdered() {
+				// Use a CSS counter-reset inline style so that <li> elements
+				// wrapped in .md-block divs (non-direct children of <ol>)
+				// still display sequential numbers.
+				openTag = fmt.Sprintf(`<ol style="counter-reset: md-li-counter %d">`, listNode.Start-1)
+				closeTag = "</ol>"
+			} else {
+				openTag = "<ul>"
+				closeTag = "</ul>"
+			}
 
-		startLine := 0
-		endLine := 0
-		if startByte >= 0 {
-			startLine = byteToLine(startByte)
-		} else {
-			startLine = lastLine + 1
+			// Collect top-level list items.
+			var items []ast.Node
+			for item := listNode.FirstChild(); item != nil; item = item.NextSibling() {
+				items = append(items, item)
+			}
+
+			for i, item := range items {
+				startLine, endLine := resolveLineRange(item, lastLine, byteToLine)
+				lastLine = endLine
+
+				buf.Reset()
+				if err := r.Render(&buf, source, item); err != nil {
+					continue
+				}
+				blockHTML := rewriteMarkdownImageSources(buf.String(), baseDir)
+
+				block := MarkdownBlock{
+					StartLine: startLine,
+					EndLine:   endLine,
+					HTML:      blockHTML,
+				}
+				if i == 0 {
+					block.ListOpen = template.HTML(openTag)
+				}
+				if i == len(items)-1 {
+					block.ListClose = template.HTML(closeTag)
+				}
+				blocks = append(blocks, block)
+			}
+			continue
 		}
-		if endByte > 0 {
-			endLine = byteToLine(endByte - 1)
-		}
-		if endLine < startLine {
-			endLine = startLine
-		}
+
+		startLine, endLine := resolveLineRange(child, lastLine, byteToLine)
 		lastLine = endLine
 
-		var buf bytes.Buffer
+		buf.Reset()
 		if err := r.Render(&buf, source, child); err != nil {
 			continue
 		}
@@ -240,6 +293,11 @@ func nodeByteRange(node ast.Node) (start, end int) {
 }
 
 func rewriteMarkdownImageSources(doc string, baseDir string) template.HTML {
+	// Fast-path: skip the full HTML parse when there are no images to rewrite.
+	if !strings.Contains(doc, "<img") {
+		return template.HTML(doc)
+	}
+
 	root, err := xhtml.Parse(strings.NewReader(doc))
 	if err != nil {
 		return template.HTML(doc)

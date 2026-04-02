@@ -100,8 +100,8 @@ func TestRenderMarkdownBlocksLineNumbers(t *testing.T) {
 	input := "# Heading\n\nParagraph text\nwith two lines.\n\n- item 1\n- item 2\n"
 	blocks := renderMarkdownBlocks("test.md", input)
 
-	if len(blocks) < 3 {
-		t.Fatalf("expected at least 3 blocks, got %d", len(blocks))
+	if len(blocks) != 4 {
+		t.Fatalf("expected 4 blocks (heading, paragraph, list-item-1, list-item-2), got %d", len(blocks))
 	}
 
 	// Heading block should start at line 1.
@@ -120,12 +120,180 @@ func TestRenderMarkdownBlocksLineNumbers(t *testing.T) {
 		t.Errorf("paragraph block: expected <p>, got %q", blocks[1].HTML)
 	}
 
-	// List block should start at line 6.
+	// First list item block should start at line 6.
 	if blocks[2].StartLine != 6 {
-		t.Errorf("list block: StartLine = %d, want 6", blocks[2].StartLine)
+		t.Errorf("list item 1 block: StartLine = %d, want 6", blocks[2].StartLine)
 	}
-	if !strings.Contains(string(blocks[2].HTML), "<li>") {
-		t.Errorf("list block: expected <li>, got %q", blocks[2].HTML)
+	if !strings.Contains(string(blocks[2].HTML), "item 1") {
+		t.Errorf("list item 1 block: expected 'item 1', got %q", blocks[2].HTML)
+	}
+	if blocks[2].ListOpen == "" {
+		t.Errorf("list item 1 block: expected non-empty ListOpen")
+	}
+
+	// Second list item block should start at line 7.
+	if blocks[3].StartLine != 7 {
+		t.Errorf("list item 2 block: StartLine = %d, want 7", blocks[3].StartLine)
+	}
+	if !strings.Contains(string(blocks[3].HTML), "item 2") {
+		t.Errorf("list item 2 block: expected 'item 2', got %q", blocks[3].HTML)
+	}
+	if blocks[3].ListClose == "" {
+		t.Errorf("list item 2 block: expected non-empty ListClose")
+	}
+}
+
+func TestRenderMarkdownBlocksOrderedListWrapper(t *testing.T) {
+	// Ordered list starting at 5 should use CSS counter-reset so that list
+	// items rendered inside .md-block wrappers still number sequentially.
+	input := "5. fifth\n6. sixth\n"
+	blocks := renderMarkdownBlocks("test.md", input)
+
+	if len(blocks) != 2 {
+		t.Fatalf("expected 2 blocks, got %d", len(blocks))
+	}
+	if !strings.Contains(string(blocks[0].ListOpen), "<ol") {
+		t.Errorf("first block ListOpen: expected '<ol', got %q", blocks[0].ListOpen)
+	}
+	// counter-reset value is Start-1 (4) so the first increment gives 5.
+	if !strings.Contains(string(blocks[0].ListOpen), "counter-reset: md-li-counter 4") {
+		t.Errorf("first block ListOpen: expected counter-reset for start=5, got %q", blocks[0].ListOpen)
+	}
+	if !strings.Contains(string(blocks[1].ListClose), "</ol>") {
+		t.Errorf("last block ListClose: expected '</ol>', got %q", blocks[1].ListClose)
+	}
+
+	// Ordered list starting at 1 should use counter-reset value 0.
+	input2 := "1. first\n2. second\n"
+	blocks2 := renderMarkdownBlocks("test.md", input2)
+
+	if len(blocks2) < 1 {
+		t.Fatalf("expected at least 1 block for 1-indexed ordered list, got %d", len(blocks2))
+	}
+	if !strings.Contains(string(blocks2[0].ListOpen), "counter-reset: md-li-counter 0") {
+		t.Errorf("first block ListOpen for 1-indexed list: expected counter-reset 0, got %q", blocks2[0].ListOpen)
+	}
+}
+
+func TestRenderMarkdownBlocksNestedList(t *testing.T) {
+	// Nested list items belong to their parent item block; only top-level items are split.
+	input := "- parent\n  - child1\n  - child2\n- sibling\n"
+	blocks := renderMarkdownBlocks("test.md", input)
+
+	if len(blocks) != 2 {
+		t.Fatalf("expected 2 blocks (parent item and sibling item), got %d", len(blocks))
+	}
+	if !strings.Contains(string(blocks[0].HTML), "child1") {
+		t.Errorf("parent block: expected nested 'child1' content, got %q", blocks[0].HTML)
+	}
+	if !strings.Contains(string(blocks[1].HTML), "sibling") {
+		t.Errorf("sibling block: expected 'sibling' content, got %q", blocks[1].HTML)
+	}
+}
+
+func TestRenderMarkdownBlocksTaskList(t *testing.T) {
+	// GFM task list checkboxes should render as <input> elements.
+	input := "- [ ] todo\n- [x] done\n"
+	blocks := renderMarkdownBlocks("test.md", input)
+
+	if len(blocks) != 2 {
+		t.Fatalf("expected 2 blocks, got %d", len(blocks))
+	}
+	if !strings.Contains(string(blocks[0].HTML), "<input") {
+		t.Errorf("todo item block: expected '<input' checkbox element, got %q", blocks[0].HTML)
+	}
+	if !strings.Contains(string(blocks[1].HTML), "checked") {
+		t.Errorf("done item block: expected 'checked' attribute, got %q", blocks[1].HTML)
+	}
+}
+
+func TestRenderMarkdownBlocksNonListUnchanged(t *testing.T) {
+	// Non-list blocks should have empty ListOpen and ListClose.
+	input := "# Heading\n\nParagraph\n\n> Blockquote\n"
+	blocks := renderMarkdownBlocks("test.md", input)
+
+	if len(blocks) < 3 {
+		t.Fatalf("expected at least 3 blocks, got %d", len(blocks))
+	}
+	for i, b := range blocks {
+		if b.ListOpen != "" {
+			t.Errorf("block %d: expected empty ListOpen, got %q", i, b.ListOpen)
+		}
+		if b.ListClose != "" {
+			t.Errorf("block %d: expected empty ListClose, got %q", i, b.ListClose)
+		}
+	}
+}
+
+func TestMarkdownBlocksListItemCommentProjection(t *testing.T) {
+	m := &ReviewModel{
+		Files:        []File{{Path: "README.md", PathSlash: "README.md", Lines: []string{"- item 1", "- item 2", "- item 3"}}},
+		SelectedPath: "README.md",
+		RenderFile:   true,
+		Comments: []Comment{
+			{ID: 1, Path: "README.md", StartLine: 2, EndLine: 2, Text: "Note on item 2"},
+		},
+		NextCommentID: 1,
+	}
+
+	updateFileView(m)
+
+	blocks := m.ViewFile.MarkdownBlocks
+	if len(blocks) != 3 {
+		t.Fatalf("expected 3 list item blocks, got %d", len(blocks))
+	}
+
+	// Block at index 0 is item 1 (line 1) — should NOT be commented.
+	if blocks[0].Commented {
+		t.Errorf("item 1 block should not be commented")
+	}
+
+	// Block at index 1 is item 2 (line 2) — should be commented.
+	if !blocks[1].Commented {
+		t.Errorf("item 2 block should be commented")
+	}
+	if len(blocks[1].Comments) != 1 {
+		t.Fatalf("item 2 block: expected 1 comment, got %d", len(blocks[1].Comments))
+	}
+	if blocks[1].Comments[0].Text != "Note on item 2" {
+		t.Errorf("item 2 block comment text: got %q, want %q", blocks[1].Comments[0].Text, "Note on item 2")
+	}
+
+	// Block at index 2 is item 3 (line 3) — should NOT be commented.
+	if blocks[2].Commented {
+		t.Errorf("item 3 block should not be commented")
+	}
+}
+
+func TestMarkdownBlocksListItemSelection(t *testing.T) {
+	m := &ReviewModel{
+		Files:          []File{{Path: "README.md", PathSlash: "README.md", Lines: []string{"- item 1", "- item 2", "- item 3"}}},
+		SelectedPath:   "README.md",
+		RenderFile:     true,
+		SelectionStart: 2,
+		SelectionEnd:   2,
+	}
+
+	updateFileView(m)
+
+	blocks := m.ViewFile.MarkdownBlocks
+	if len(blocks) != 3 {
+		t.Fatalf("expected 3 list item blocks, got %d", len(blocks))
+	}
+
+	// Block at index 0 is item 1 (line 1) — should NOT be selected.
+	if blocks[0].Selected {
+		t.Errorf("item 1 block should not be selected")
+	}
+
+	// Block at index 1 is item 2 (line 2) — should be selected.
+	if !blocks[1].Selected {
+		t.Errorf("item 2 block should be selected")
+	}
+
+	// Block at index 2 is item 3 (line 3) — should NOT be selected.
+	if blocks[2].Selected {
+		t.Errorf("item 3 block should not be selected")
 	}
 }
 

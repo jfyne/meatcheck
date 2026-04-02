@@ -222,6 +222,7 @@
   {{if and .ViewFile.MarkdownFile .ViewFile.MarkdownRendered}}
   <div class="markdown-file-preview markdown" id="code-view-{{.CodeViewKey}}">
     {{range .ViewFile.MarkdownBlocks}}
+      {{if .ListOpen}}{{.ListOpen}}{{end}}
       <div class="md-block{{if .Selected}} selected{{end}}{{if .Commented}} commented{{end}}" id="line-{{id $root.SelectedPath}}-{{.StartLine}}">
         <div class="md-block-content" data-line="{{.StartLine}}" data-line-end="{{.EndLine}}">{{.HTML}}</div>
         {{if .Comments}}
@@ -243,6 +244,7 @@
           </div>
         {{end}}
       </div>
+      {{if .ListClose}}{{.ListClose}}{{end}}
     {{end}}
   </div>
   {{else}}
