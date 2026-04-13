@@ -7,6 +7,16 @@ import (
 	"unicode"
 )
 
+// escapeWordToken HTML-escapes s and replaces space/tab characters with
+// non-breaking space entities so that whitespace is preserved visually inside
+// inline highlight spans regardless of the surrounding white-space CSS rule.
+func escapeWordToken(s string) string {
+	s = html.EscapeString(s)
+	s = strings.ReplaceAll(s, " ", "&nbsp;")
+	s = strings.ReplaceAll(s, "\t", "&nbsp;&nbsp;&nbsp;&nbsp;")
+	return s
+}
+
 type wordEditKind int
 
 const (
@@ -223,7 +233,7 @@ func renderIntraLineHTML(oldText, newText string) (template.HTML, template.HTML)
 	// Build HTML for each side.
 	var oldBuf, newBuf strings.Builder
 	for _, e := range edits {
-		escaped := html.EscapeString(e.text)
+		escaped := escapeWordToken(e.text)
 		switch e.kind {
 		case wordEqual:
 			oldBuf.WriteString(escaped)
