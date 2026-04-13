@@ -230,21 +230,25 @@ func renderIntraLineHTML(oldText, newText string) (template.HTML, template.HTML)
 		return "", ""
 	}
 
-	// Build HTML for each side.
+	// Build HTML for each side. Equal tokens keep literal whitespace so they
+	// render identically to context lines (which use raw \t / space under the
+	// surrounding white-space:pre-wrap; tab-size:4 CSS). Only changed tokens
+	// inside intra-* spans need &nbsp; protection — the span boundary is where
+	// browsers may collapse a lone whitespace child.
 	var oldBuf, newBuf strings.Builder
 	for _, e := range edits {
-		escaped := escapeWordToken(e.text)
 		switch e.kind {
 		case wordEqual:
-			oldBuf.WriteString(escaped)
-			newBuf.WriteString(escaped)
+			safe := html.EscapeString(e.text)
+			oldBuf.WriteString(safe)
+			newBuf.WriteString(safe)
 		case wordDelete:
 			oldBuf.WriteString(`<span class="intra-del">`)
-			oldBuf.WriteString(escaped)
+			oldBuf.WriteString(escapeWordToken(e.text))
 			oldBuf.WriteString(`</span>`)
 		case wordInsert:
 			newBuf.WriteString(`<span class="intra-add">`)
-			newBuf.WriteString(escaped)
+			newBuf.WriteString(escapeWordToken(e.text))
 			newBuf.WriteString(`</span>`)
 		}
 	}

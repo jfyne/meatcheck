@@ -482,6 +482,220 @@ func TestRenderHeaderContextCSS(t *testing.T) {
 	}
 }
 
+// TestHTTPRenderUnifiedDiffIntraLineWithoutChroma verifies that the unified
+// diff template emits the intra-line word-diff HTML even when RenderFile is
+// false (chroma disabled). The gate for choosing .HTML vs .Text must be the
+// presence of .HTML content, NOT the RenderFile flag.
+//
+// Regression: before the fix, the template used {{if $root.RenderFile}} to
+// pick between .HTML and .Text. With chroma off, that branch emitted only
+// plain text, so intra-line highlights were invisible in the UI.
+func TestHTTPRenderUnifiedDiffIntraLineWithoutChroma(t *testing.T) {
+	model := &ReviewModel{
+		DiffFiles: []DiffFile{{
+			Path: "intra.go",
+			Hunks: []DiffHunk{{
+				OldStart: 1,
+				OldCount: 1,
+				NewStart: 1,
+				NewCount: 1,
+				Lines: []DiffLine{
+					{Kind: DiffDel, OldLine: 1, NewLine: 0, Text: "return nil"},
+					{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "return err"},
+				},
+			}},
+		}},
+		SelectedPath:         "intra.go",
+		Mode:                 ModeDiff,
+		DiffFormat:           DiffFormatUnified,
+		RenderFile:           false, // chroma OFF
+		RenderComments:       true,
+		Viewed:               make(map[string]bool),
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+	model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath, nil, nil)
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, `<span class="intra-del">nil</span>`) {
+		t.Errorf("expected intra-del span in rendered HTML with RenderFile=false, got: %q", html)
+	}
+	if !strings.Contains(html, `<span class="intra-add">err</span>`) {
+		t.Errorf("expected intra-add span in rendered HTML with RenderFile=false, got: %q", html)
+	}
+}
+
+// TestHTTPRenderSplitDiffIntraLineWithoutChroma verifies the same behavior
+// for the split-diff template: intra-line highlight HTML must be emitted
+// regardless of RenderFile.
+//
+// Regression: same gate bug previously lived in the split-view template.
+func TestHTTPRenderSplitDiffIntraLineWithoutChroma(t *testing.T) {
+	model := &ReviewModel{
+		DiffFiles: []DiffFile{{
+			Path: "intra.go",
+			Hunks: []DiffHunk{{
+				OldStart: 1,
+				OldCount: 1,
+				NewStart: 1,
+				NewCount: 1,
+				Lines: []DiffLine{
+					{Kind: DiffDel, OldLine: 1, NewLine: 0, Text: "return nil"},
+					{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "return err"},
+				},
+			}},
+		}},
+		SelectedPath:         "intra.go",
+		Mode:                 ModeDiff,
+		DiffFormat:           DiffFormatSplit,
+		RenderFile:           false, // chroma OFF
+		RenderComments:       true,
+		Viewed:               make(map[string]bool),
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+	model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath, nil, nil)
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, `<span class="intra-del">nil</span>`) {
+		t.Errorf("expected intra-del span in rendered split-diff HTML with RenderFile=false, got: %q", html)
+	}
+	if !strings.Contains(html, `<span class="intra-add">err</span>`) {
+		t.Errorf("expected intra-add span in rendered split-diff HTML with RenderFile=false, got: %q", html)
+	}
+}
+
+// TestHTTPRenderUnifiedDiffFallsBackToText verifies that when a line has no
+// .HTML (no intra-line diff, no chroma) the template still emits the raw
+// .Text content. Otherwise context/plain lines would render empty.
+func TestHTTPRenderUnifiedDiffFallsBackToText(t *testing.T) {
+	model := &ReviewModel{
+		DiffFiles: []DiffFile{{
+			Path: "ctx.go",
+			Hunks: []DiffHunk{{
+				OldStart: 1,
+				OldCount: 1,
+				NewStart: 1,
+				NewCount: 1,
+				Lines: []DiffLine{
+					{Kind: DiffContext, OldLine: 1, NewLine: 1, Text: "unchanged line"},
+				},
+			}},
+		}},
+		SelectedPath:         "ctx.go",
+		Mode:                 ModeDiff,
+		DiffFormat:           DiffFormatUnified,
+		RenderFile:           false,
+		RenderComments:       true,
+		Viewed:               make(map[string]bool),
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+	model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath, nil, nil)
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, "unchanged line") {
+		t.Errorf("expected context line text to appear in rendered HTML when .HTML is empty, got: %q", html)
+	}
+}
+
+// TestHTTPRenderUnifiedDiffWhitespaceTokenIsNbsp verifies end-to-end that
+// when an inserted edit is itself a whitespace token, the rendered template
+// emits it as a &nbsp;-only intra-add span (so the inline box doesn't
+// collapse) and never as a raw-space-only intra-add span.
+//
+// Regression: the original word-diff fix indiscriminately rewrote *all*
+// whitespace to &nbsp;, which threw indentation alignment off versus context
+// lines. The current fix scopes &nbsp; to only changed-whitespace tokens —
+// this test ensures that scoped behaviour survives end-to-end through the
+// template.
+func TestHTTPRenderUnifiedDiffWhitespaceTokenIsNbsp(t *testing.T) {
+	model := &ReviewModel{
+		DiffFiles: []DiffFile{{
+			Path: "spaces.go",
+			Hunks: []DiffHunk{{
+				OldStart: 1,
+				OldCount: 1,
+				NewStart: 1,
+				NewCount: 1,
+				Lines: []DiffLine{
+					// Inserting " qux" adds a [space, "qux"] token pair; the
+					// space token alone becomes a whitespace-only intra-add span.
+					{Kind: DiffDel, OldLine: 1, NewLine: 0, Text: "foo bar"},
+					{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "foo baz qux"},
+				},
+			}},
+		}},
+		SelectedPath:         "spaces.go",
+		Mode:                 ModeDiff,
+		DiffFormat:           DiffFormatUnified,
+		RenderFile:           false,
+		RenderComments:       true,
+		Viewed:               make(map[string]bool),
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+	model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath, nil, nil)
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, `<span class="intra-add">&nbsp;</span>`) {
+		t.Errorf("expected a whitespace-only intra-add span rendered as &nbsp;, got: %q", html)
+	}
+	if strings.Contains(html, `<span class="intra-add"> </span>`) {
+		t.Errorf("rendered HTML must not emit a raw-space-only intra-add span, got: %q", html)
+	}
+}
+
+// TestHTTPRenderUnifiedDiffEqualWhitespaceIsLiteral verifies end-to-end that
+// whitespace inside an *equal* span (e.g. the indent on a changed line, or a
+// space between unchanged and changed words) is preserved as literal
+// whitespace in the rendered HTML — not rewritten to &nbsp;. Equal-token
+// whitespace must look identical to the same whitespace on a context line so
+// indentation columns line up across the diff.
+func TestHTTPRenderUnifiedDiffEqualWhitespaceIsLiteral(t *testing.T) {
+	model := &ReviewModel{
+		DiffFiles: []DiffFile{{
+			Path: "indent.go",
+			Hunks: []DiffHunk{{
+				OldStart: 1,
+				OldCount: 1,
+				NewStart: 1,
+				NewCount: 1,
+				Lines: []DiffLine{
+					{Kind: DiffDel, OldLine: 1, NewLine: 0, Text: "\treturn nil"},
+					{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "\treturn err"},
+				},
+			}},
+		}},
+		SelectedPath:         "indent.go",
+		Mode:                 ModeDiff,
+		DiffFormat:           DiffFormatUnified,
+		RenderFile:           false,
+		RenderComments:       true,
+		Viewed:               make(map[string]bool),
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+	model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath, nil, nil)
+
+	html := renderReviewHTML(t, model)
+
+	// The leading tab is part of the equal prefix and must reach the rendered
+	// HTML as a literal \t (under tab-size:4 CSS), matching how the same
+	// indent renders on a context line. A &nbsp;-expanded indent would
+	// regress to the original alignment bug.
+	if !strings.Contains(html, "\treturn ") {
+		t.Errorf("expected literal-tab indent in equal-prefix of rendered diff, got: %q", html)
+	}
+	if strings.Contains(html, "&nbsp;&nbsp;&nbsp;&nbsp;return") {
+		t.Errorf("rendered HTML must not &nbsp;-expand the equal-token indent, got: %q", html)
+	}
+}
+
 func renderReviewHTML(t *testing.T, model *ReviewModel) string {
 	t.Helper()
 
