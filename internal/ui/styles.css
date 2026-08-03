@@ -49,21 +49,6 @@ body {
   position: relative;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.logo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-}
-
 .tree-item {
   display: flex;
   align-items: center;
@@ -139,18 +124,6 @@ body {
   color: var(--muted);
 }
 
-.sidebar-brand {
-  margin-top: auto;
-  padding-top: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-}
-
 .main {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -216,11 +189,16 @@ body {
   white-space: nowrap;
 }
 
+/* The die-cut white outline is the mark's identity, so it is never cropped to a
+   circle — contain keeps the whole sticker. The artwork sits in a transparent
+   square, so the box is oversized to give the mark the optical weight the old
+   circular avatar had, and the negative block margin reclaims the empty bands
+   above and below it so the header keeps its height. */
 .header-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
-  object-fit: cover;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  margin-block: -10px;
   flex: 0 0 auto;
 }
 
@@ -324,6 +302,15 @@ body {
   border: 1px solid var(--border);
   padding: 8px 0;
   overflow: auto;
+}
+
+/* With no tree to anchor to, the 980px measure would hug the left edge and
+   leave a growing gutter on the right, so it is centred in the window instead.
+   Padding the container rather than the blocks keeps list items — which sit
+   inside a <ul>/<ol> wrapper, not directly in the container — in step with the
+   headings around them. */
+.no-sidebar .markdown-file-preview {
+  padding-inline: max(0px, calc((100% - 980px) / 2));
 }
 
 .md-block {
@@ -801,9 +788,13 @@ textarea {
   overflow: hidden;
 }
 
-.sidebar-collapsed .tree-item,
-.sidebar-collapsed .sidebar-brand {
+.sidebar-collapsed .tree-item {
   display: none;
+}
+
+/* One file under review: nothing to navigate, so the tree column is dropped. */
+.no-sidebar {
+  grid-template-columns: 1fr;
 }
 
 .sidebar-collapsed .sidebar-toggle-btn {
@@ -828,6 +819,12 @@ textarea {
   .workspace.sidebar-collapsed {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
+  }
+
+  /* No tree row to stack above the file, so the file takes the whole grid. */
+  .workspace.no-sidebar {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
   }
 
   .sidebar {

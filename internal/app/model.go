@@ -167,6 +167,15 @@ type ReviewModel struct {
 	Error                string
 }
 
+// SingleFile reports whether the review covers exactly one file. The tree has
+// nothing to navigate in that case, so the view drops the sidebar entirely.
+func (m *ReviewModel) SingleFile() bool {
+	if m.Mode == ModeDiff {
+		return len(m.DiffFiles) == 1
+	}
+	return len(m.Files) == 1
+}
+
 // GitContext holds git repository information detected at startup.
 // A nil pointer means git context is unavailable (non-git directory or git not installed).
 type GitContext struct {

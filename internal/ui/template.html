@@ -51,7 +51,7 @@
     {{$root := .}}
     <header class="header">
         <div class="header-top">
-          <img src="{{$.Avatar}}" alt="AI avatar" class="header-avatar" />
+          <img src="{{$.Logo}}" alt="Meatcheck" class="header-avatar" />
           {{if .Prompt}}
             <div class="prompt-inline">
               {{if .PromptHTML}}
@@ -94,7 +94,8 @@
         {{end}}
     </header>
 
-    <div class="workspace{{if .SidebarCollapsed}} sidebar-collapsed{{end}}"{{if .SidebarWidth}} style="--sidebar-width: {{.SidebarWidth}}"{{end}}>
+    <div class="workspace{{if .SingleFile}} no-sidebar{{else if .SidebarCollapsed}} sidebar-collapsed{{end}}"{{if and (not .SingleFile) .SidebarWidth}} style="--sidebar-width: {{.SidebarWidth}}"{{end}}>
+      {{if not .SingleFile}}
       <aside class="sidebar">
         <button class="sidebar-toggle-btn" live-click="toggle-sidebar" title="{{if .SidebarCollapsed}}Expand sidebar{{else}}Collapse sidebar{{end}}" aria-label="{{if .SidebarCollapsed}}Expand sidebar{{else}}Collapse sidebar{{end}}">
           {{if .SidebarCollapsed}}&#9654;{{else}}&#9664;{{end}}
@@ -114,12 +115,9 @@
             </div>
           {{end}}
         {{end}}
-        <div class="sidebar-brand">
-          <img src="{{$.Logo}}" alt="Meatcheck logo" class="logo" />
-          <span>Meatcheck</span>
-        </div>
         <div class="sidebar-resize-handle" aria-hidden="true"></div>
       </aside>
+      {{end}}
 
       <section class="main">
         <div class="column-header">

@@ -24,7 +24,6 @@ var (
 	templateHTML = mustReadEmbedded("template.html")
 	stylesCSS    = mustReadEmbedded("styles.css")
 	logoBytes    = mustReadEmbeddedBytes("logo.png")
-	avatarBytes  = mustReadEmbeddedBytes("ai.png")
 )
 
 var (

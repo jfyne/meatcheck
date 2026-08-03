@@ -696,6 +696,88 @@ func TestHTTPRenderUnifiedDiffEqualWhitespaceIsLiteral(t *testing.T) {
 	}
 }
 
+func TestHTTPRenderHidesSidebarForSingleFile(t *testing.T) {
+	model := &ReviewModel{
+		Files:                []File{{Path: "a.go", PathSlash: "a.go", Lines: []string{"package main"}}},
+		SelectedPath:         "a.go",
+		Mode:                 ModeFile,
+		SidebarWidth:         "320px",
+		RenderFile:           true,
+		RenderComments:       true,
+		Viewed:               make(map[string]bool),
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+	model.Tree = buildTree(model.Files, model.SelectedPath, nil, nil)
+
+	html := renderReviewHTML(t, model)
+
+	if strings.Contains(html, `<aside class="sidebar">`) {
+		t.Errorf("expected no sidebar when reviewing a single file, got: %q", html)
+	}
+	if !strings.Contains(html, `class="workspace no-sidebar"`) {
+		t.Errorf("expected workspace to collapse to one column for a single file, got: %q", html)
+	}
+	if strings.Contains(html, `style="--sidebar-width:`) {
+		t.Errorf("expected no sidebar width style when the sidebar is hidden, got: %q", html)
+	}
+}
+
+func TestHTTPRenderShowsSidebarForMultipleFiles(t *testing.T) {
+	model := &ReviewModel{
+		Files: []File{
+			{Path: "a.go", PathSlash: "a.go", Lines: []string{"package main"}},
+			{Path: "b.go", PathSlash: "b.go", Lines: []string{"package main"}},
+		},
+		SelectedPath:         "a.go",
+		Mode:                 ModeFile,
+		RenderFile:           true,
+		RenderComments:       true,
+		Viewed:               make(map[string]bool),
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+	model.Tree = buildTree(model.Files, model.SelectedPath, nil, nil)
+
+	html := renderReviewHTML(t, model)
+
+	if !strings.Contains(html, `<aside class="sidebar">`) {
+		t.Errorf("expected sidebar when reviewing more than one file, got: %q", html)
+	}
+	if strings.Contains(html, `class="workspace no-sidebar"`) {
+		t.Errorf("expected the one-column workspace only for single-file reviews, got: %q", html)
+	}
+}
+
+func TestHTTPRenderHidesSidebarForSingleFileDiff(t *testing.T) {
+	model := &ReviewModel{
+		DiffFiles: []DiffFile{{
+			Path: "a.go",
+			Hunks: []DiffHunk{{
+				OldStart: 1,
+				OldCount: 1,
+				NewStart: 1,
+				NewCount: 1,
+				Lines:    []DiffLine{{Kind: DiffAdd, OldLine: 0, NewLine: 1, Text: "package main"}},
+			}},
+		}},
+		SelectedPath:         "a.go",
+		Mode:                 ModeDiff,
+		DiffFormat:           DiffFormatUnified,
+		RenderComments:       true,
+		Viewed:               make(map[string]bool),
+		Ranges:               map[string][]LineRange{},
+		MarkdownRenderByPath: map[string]bool{},
+	}
+	model.Tree = buildTree(diffFilesAsFiles(model.DiffFiles), model.SelectedPath, nil, nil)
+
+	html := renderReviewHTML(t, model)
+
+	if strings.Contains(html, `<aside class="sidebar">`) {
+		t.Errorf("expected no sidebar when reviewing a single-file diff, got: %q", html)
+	}
+}
+
 func renderReviewHTML(t *testing.T, model *ReviewModel) string {
 	t.Helper()
 
