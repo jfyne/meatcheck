@@ -224,16 +224,13 @@ func buildLiveHandler(rs *ReviewServer) *live.Handler {
 	h.RenderHandler = func(ctx context.Context, rc *live.RenderContext) (io.Reader, error) {
 		css := buildCSS()
 		logoData := template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(logoBytes))
-		avatarData := template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(avatarBytes))
 		data := struct {
-			CSS    template.CSS
-			Logo   template.URL
-			Avatar template.URL
+			CSS  template.CSS
+			Logo template.URL
 			*live.RenderContext
 		}{
 			CSS:           template.CSS(css),
 			Logo:          logoData,
-			Avatar:        avatarData,
 			RenderContext: rc,
 		}
 		var buf bytes.Buffer
