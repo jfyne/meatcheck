@@ -35,14 +35,26 @@ func updateFileView(model *ReviewModel) {
 		}
 		if viewFile.MarkdownFile && viewFile.MarkdownRendered {
 			blocks := renderMarkdownBlocks(selectedFile.Path, strings.Join(selectedFile.Lines, "\n"))
+			commentRanges := blockCommentRanges(blocks)
+			openFolds := map[int]bool{}
 			for i := range blocks {
+				if blocks[i].Wrapper {
+					continue
+				}
 				blocks[i].Selected = model.SelectionStart > 0 && model.SelectionEnd > 0 &&
 					blocks[i].EndLine >= model.SelectionStart && blocks[i].StartLine <= model.SelectionEnd
 				blocks[i].Commented, blocks[i].Comments = projectBlockComments(
-					selectedFile.Path, blocks[i].StartLine, blocks[i].EndLine,
+					selectedFile.Path, commentRanges[i][0], commentRanges[i][1],
 					model.Comments, model.EditingCommentID,
 				)
+				if !blocks[i].Selected && !blocks[i].Commented {
+					continue
+				}
+				for _, fold := range blocks[i].InFolds {
+					openFolds[fold] = true
+				}
 			}
+			expandFolds(blocks, openFolds)
 			viewFile.MarkdownBlocks = blocks
 			model.ViewFile = viewFile
 			model.SelectedLabel = formatSelectedLabel(model.SelectedPath, model.Ranges[model.SelectedPath])
@@ -334,6 +346,58 @@ func projectLineComments(path string, lineNum int, comments []Comment, editingID
 		}
 	}
 	return commented, lineComments
+}
+
+// blockCommentRanges returns, per block, the source range whose comments that
+// block displays. Wrapper markup renders outside the block divs, so its own
+// lines are folded into the block that follows it — or, at the end of the
+// document, the one before it — and a comment left on a <details> line in the
+// code view still surfaces in the rendered view.
+func blockCommentRanges(blocks []MarkdownBlock) [][2]int {
+	ranges := make([][2]int, len(blocks))
+	for i := range blocks {
+		if !blocks[i].Wrapper {
+			ranges[i] = [2]int{blocks[i].StartLine, blocks[i].EndLine}
+		}
+	}
+
+	next := -1
+	trailingEnd := 0
+	for i := len(blocks) - 1; i >= 0; i-- {
+		if !blocks[i].Wrapper {
+			if next == -1 && trailingEnd > 0 {
+				ranges[i][1] = trailingEnd
+			}
+			next = i
+			continue
+		}
+		if next >= 0 {
+			ranges[next][0] = blocks[i].StartLine
+		} else if trailingEnd == 0 {
+			trailingEnd = blocks[i].EndLine
+		}
+	}
+
+	return ranges
+}
+
+// expandFolds renders the given folds open, so a collapsed <details> never
+// hides a comment thread or the block the reviewer is commenting on.
+func expandFolds(blocks []MarkdownBlock, open map[int]bool) {
+	if len(open) == 0 {
+		return
+	}
+	for i := range blocks {
+		if blocks[i].HTMLOpen == "" {
+			continue
+		}
+		for _, fold := range blocks[i].OpensFolds {
+			if open[fold] {
+				blocks[i].HTML = blocks[i].HTMLOpen
+				break
+			}
+		}
+	}
 }
 
 func projectBlockComments(path string, startLine, endLine int, comments []Comment, editingID int) (bool, []ViewComment) {

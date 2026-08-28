@@ -56,6 +56,17 @@ type MarkdownBlock struct {
 	Comments  []ViewComment
 	ListOpen  template.HTML
 	ListClose template.HTML
+	// Wrapper marks raw HTML that opens or closes an element spanning several
+	// blocks, such as a <details> fold or a <div> wrapper. Its HTML renders
+	// bare, between the block divs, so the blocks it encloses nest inside it.
+	Wrapper bool
+	// HTMLOpen is the wrapper HTML with the folds it opens forced open. Empty
+	// unless the wrapper opens a <details>.
+	HTMLOpen template.HTML
+	// OpensFolds lists the folds this wrapper opens; InFolds lists the folds
+	// enclosing this block, outermost first.
+	OpensFolds []int
+	InFolds    []int
 }
 
 type ViewFile struct {

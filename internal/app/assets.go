@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -180,6 +181,9 @@ func renderMarkdownBlocks(path, input string) []MarkdownBlock {
 	// Render each top-level block. A single buffer is reused across iterations.
 	var buf bytes.Buffer
 	lastLine := fmLineCount
+	// Folds opened by raw <details> markup and not yet closed, outermost first.
+	var foldStack []int
+	lastFoldID := 0
 	for child := doc.FirstChild(); child != nil; child = child.NextSibling() {
 		if listNode, ok := child.(*ast.List); ok {
 			// Build wrapper tags.
@@ -188,10 +192,10 @@ func renderMarkdownBlocks(path, input string) []MarkdownBlock {
 				// Use a CSS counter-reset inline style so that <li> elements
 				// wrapped in .md-block divs (non-direct children of <ol>)
 				// still display sequential numbers.
-				openTag = fmt.Sprintf(`<ol style="counter-reset: md-li-counter %d">`, listNode.Start-1)
+				openTag = fmt.Sprintf(`<ol class="md-list" style="counter-reset: md-li-counter %d">`, listNode.Start-1)
 				closeTag = "</ol>"
 			} else {
-				openTag = "<ul>"
+				openTag = `<ul class="md-list">`
 				closeTag = "</ul>"
 			}
 
@@ -215,6 +219,7 @@ func renderMarkdownBlocks(path, input string) []MarkdownBlock {
 					StartLine: startLine,
 					EndLine:   endLine,
 					HTML:      blockHTML,
+					InFolds:   slices.Clone(foldStack),
 				}
 				if i == 0 {
 					block.ListOpen = template.HTML(openTag)
@@ -234,12 +239,45 @@ func renderMarkdownBlocks(path, input string) []MarkdownBlock {
 		if err := r.Render(&buf, source, child); err != nil {
 			continue
 		}
-		blockHTML := rewriteMarkdownImageSources(buf.String(), baseDir)
+		rendered := buf.String()
+
+		// Raw HTML that leaves an element open — a <details> fold, a <div>
+		// wrapper — has to render outside the block divs, otherwise the div
+		// closes the element before the blocks it was meant to enclose.
+		if child.Kind() == ast.KindHTMLBlock {
+			if shape := inspectRawHTML(rendered); !shape.balanced {
+				raw := rewriteRawHTMLImageSources(rendered, baseDir)
+				if raw != rendered {
+					shape = inspectRawHTML(raw)
+				}
+
+				block := MarkdownBlock{
+					StartLine: startLine,
+					EndLine:   endLine,
+					HTML:      template.HTML(raw),
+					HTMLOpen:  template.HTML(shape.openHTML),
+					Wrapper:   true,
+				}
+				for range shape.closesDetails {
+					if n := len(foldStack); n > 0 {
+						foldStack = foldStack[:n-1]
+					}
+				}
+				for range shape.opensDetails {
+					lastFoldID++
+					foldStack = append(foldStack, lastFoldID)
+					block.OpensFolds = append(block.OpensFolds, lastFoldID)
+				}
+				blocks = append(blocks, block)
+				continue
+			}
+		}
 
 		blocks = append(blocks, MarkdownBlock{
 			StartLine: startLine,
 			EndLine:   endLine,
-			HTML:      blockHTML,
+			HTML:      rewriteMarkdownImageSources(rendered, baseDir),
+			InFolds:   slices.Clone(foldStack),
 		})
 	}
 
@@ -305,17 +343,7 @@ func rewriteMarkdownImageSources(doc string, baseDir string) template.HTML {
 	var walk func(*xhtml.Node)
 	walk = func(n *xhtml.Node) {
 		if n.Type == xhtml.ElementNode && n.Data == "img" {
-			for i := range n.Attr {
-				if n.Attr[i].Key != "src" {
-					continue
-				}
-				src := strings.TrimSpace(n.Attr[i].Val)
-				if src == "" || isExternalAssetURL(src) {
-					continue
-				}
-				rel := filepath.Clean(filepath.ToSlash(filepath.Join(baseDir, src)))
-				n.Attr[i].Val = "/file?path=" + url.QueryEscape(rel)
-			}
+			rewriteImageAttrs(n.Attr, baseDir)
 		}
 		for child := n.FirstChild; child != nil; child = child.NextSibling {
 			walk(child)
@@ -330,6 +358,166 @@ func rewriteMarkdownImageSources(doc string, baseDir string) template.HTML {
 		}
 	}
 	return template.HTML(out.String())
+}
+
+// rewriteRawHTMLImageSources rewrites local image sources token by token. A
+// wrapper block is unbalanced on purpose, so it cannot go through the document
+// parse in rewriteMarkdownImageSources, which would close its open tags.
+func rewriteRawHTMLImageSources(raw string, baseDir string) string {
+	if !strings.Contains(raw, "<img") {
+		return raw
+	}
+
+	var out strings.Builder
+	z := xhtml.NewTokenizer(strings.NewReader(raw))
+	for {
+		tt := z.Next()
+		if tt == xhtml.ErrorToken {
+			break
+		}
+		// Raw's contents are only valid until the next tokenizer call.
+		text := string(z.Raw())
+		if tt != xhtml.StartTagToken && tt != xhtml.SelfClosingTagToken {
+			out.WriteString(text)
+			continue
+		}
+		token := z.Token()
+		if token.Data != "img" {
+			out.WriteString(text)
+			continue
+		}
+		rewriteImageAttrs(token.Attr, baseDir)
+		out.WriteString(token.String())
+	}
+	return out.String()
+}
+
+// rewriteImageAttrs points a local image source at the file endpoint, in place.
+func rewriteImageAttrs(attrs []xhtml.Attribute, baseDir string) {
+	for i := range attrs {
+		if attrs[i].Key != "src" {
+			continue
+		}
+		src := strings.TrimSpace(attrs[i].Val)
+		if src == "" || isExternalAssetURL(src) {
+			continue
+		}
+		rel := filepath.Clean(filepath.ToSlash(filepath.Join(baseDir, src)))
+		attrs[i].Val = "/file?path=" + url.QueryEscape(rel)
+	}
+}
+
+// voidHTMLElements never carry a closing tag, so they leave a raw HTML block
+// balanced.
+var voidHTMLElements = map[string]bool{
+	"area": true, "base": true, "br": true, "col": true, "embed": true,
+	"hr": true, "img": true, "input": true, "link": true, "meta": true,
+	"param": true, "source": true, "track": true, "wbr": true,
+}
+
+// rawHTMLShape describes how a raw HTML block nests.
+type rawHTMLShape struct {
+	// balanced reports whether the block closes every element it opens and
+	// opens every element it closes. An unbalanced block encloses the blocks
+	// around it rather than standing on its own.
+	balanced bool
+	// opensDetails counts the <details> elements the block leaves open;
+	// closesDetails counts the </details> tags closing an earlier one.
+	opensDetails  int
+	closesDetails int
+	// openHTML is the block's HTML with an open attribute on each <details> it
+	// leaves open. Empty when it leaves none open.
+	openHTML string
+}
+
+// inspectRawHTML walks the tags of a raw HTML block, tracking which elements it
+// leaves open and which it closes without having opened.
+func inspectRawHTML(raw string) rawHTMLShape {
+	shape := rawHTMLShape{balanced: true}
+
+	type openTag struct {
+		name        string
+		tagEnd      int // offset of the '>' closing the start tag
+		alreadyOpen bool
+	}
+	var stack []openTag
+
+	z := xhtml.NewTokenizer(strings.NewReader(raw))
+	offset := 0
+	for {
+		tt := z.Next()
+		if tt == xhtml.ErrorToken {
+			break
+		}
+		// Read the length before TagName, which may rewrite Raw's buffer.
+		offset += len(z.Raw())
+
+		switch tt {
+		case xhtml.StartTagToken:
+			name, hasAttr := z.TagName()
+			tag := string(name)
+			if voidHTMLElements[tag] {
+				continue
+			}
+			open := openTag{name: tag, tagEnd: offset - 1}
+			for hasAttr {
+				var key []byte
+				key, _, hasAttr = z.TagAttr()
+				if string(key) == "open" {
+					open.alreadyOpen = true
+				}
+			}
+			stack = append(stack, open)
+		case xhtml.EndTagToken:
+			name, _ := z.TagName()
+			tag := string(name)
+			if n := len(stack); n > 0 && stack[n-1].name == tag {
+				stack = stack[:n-1]
+				continue
+			}
+			shape.balanced = false
+			if tag == "details" {
+				shape.closesDetails++
+			}
+		}
+	}
+
+	if len(stack) > 0 {
+		shape.balanced = false
+	}
+
+	var forceOpen []int
+	for _, tag := range stack {
+		if tag.name != "details" {
+			continue
+		}
+		shape.opensDetails++
+		// Splice only into a start tag the tokenizer read to its '>'.
+		if !tag.alreadyOpen && tag.tagEnd < len(raw) && raw[tag.tagEnd] == '>' {
+			forceOpen = append(forceOpen, tag.tagEnd)
+		}
+	}
+	if shape.opensDetails > 0 {
+		shape.openHTML = insertAtOffsets(raw, forceOpen, " open")
+	}
+
+	return shape
+}
+
+// insertAtOffsets splices text into raw at each offset, ascending.
+func insertAtOffsets(raw string, offsets []int, text string) string {
+	if len(offsets) == 0 {
+		return raw
+	}
+	var out strings.Builder
+	prev := 0
+	for _, offset := range offsets {
+		out.WriteString(raw[prev:offset])
+		out.WriteString(text)
+		prev = offset
+	}
+	out.WriteString(raw[prev:])
+	return out.String()
 }
 
 func isExternalAssetURL(s string) bool {

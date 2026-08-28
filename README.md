@@ -15,6 +15,7 @@ A local PR‑style review UI for LLM workflows. Run the `meatcheck` CLI with a s
 - Unified and side‑by‑side diff views (toggle via toolbar button)
 - Comment on both added and deleted lines in diff mode
 - Markdown rendering for comments (toggle raw/rendered)
+- Collapsible `<details>` sections in rendered markdown, collapsed by default like GitHub
 - Syntax highlighting for code (toggle raw/rendered)
 - Grouped review mode — organize files into named groups via `--groups`
 - Per‑file viewed/commented indicators in the tree sidebar
