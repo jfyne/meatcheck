@@ -87,3 +87,4 @@ comments[2]{end_line,path,start_line,text}:
 - Use `--range` to render only specific sections of a file.
 - Use `--groups` to organize files into named feature groups.
 - Use `--skill` to print this SKILL.md content.
+- Markdown files render with `<details>` sections collapsed, as on GitHub. Leave a blank line between the `<summary>` and the content so the content stays markdown the reviewer can comment on block by block.
